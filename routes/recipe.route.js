@@ -1,138 +1,36 @@
 /**
- * Created by eliasmj on 15/08/2016.
+ * Created by eliasmj on 26/11/2016.
  */
+var express = require('express');
+var router = express.Router();
 
-(function () {
-    'use strict'
+router.get("/recipe", (req, res, next) => {
+    res.json([]);
+});
 
-    var express = require('express');
-    var router = express.Router();
+router.get("/recipe/:id", (req, res, next) => {
 
-    var Recipes = require('../models/recipe.model').recipe();
+    console.log("Recipe id", req.params.id)
 
-    router.get("/recipe", list);
-    router.get("/recipe/:id", load);
-    router.post("/recipe", save);
-    router.put("/recipe/:id", update);
-    router.delete("/recipe/:id", _delete);
+    res.json({});
+});
 
-    function list(req, res, next){
+router.post('/recipe', (req, res, next) => {
+    res
+        .status(201)
+        .end();
+});
 
-        Recipes.find(function(err, doc){
+router.put('/recipe', (req, res, next) => {
+    //use 204 No Content to indicate to the client that
+    // it doesn't need to change its current "document view".
+    res
+        .status(204)
+        .end();
+});
 
-            console.log("List length", doc.length);
+router.delete('/recipe', (req, res, next) => {
+    res.end();
+});
 
-            //res.send(JSON.stringify(doc));
-            res.json(doc);
-        });
-    }
-
-    function load(req, res, next) {
-
-        console.log("Load id", req.params.id)
-
-        Recipes.findOne(function (err, doc) {
-
-            var itemRequired = null;
-            doc.recipes.forEach(function (item) {
-                if(item._id && item._id.toString() === req.params.id.toString()) {
-                    itemRequired = item;
-                }
-            });
-
-            res.json(itemRequired);
-        });
-
-
-        // Recipes.findById(req.params.id, function(err, doc){
-        //     res.json(doc);
-        // });
-    }
-
-    function save(req, res, next) {
-
-        console.log("Save ", req.body)
-
-        Recipes.findOne(function (err, doc) {
-
-            if(err) {
-                throw err;
-            }
-
-            doc.recipes.push(req.body);
-            doc.markModified();
-
-            doc.save(function(errIn){
-                if(errIn) {
-                    throw errIn;
-                }
-                res.end();
-            });
-        });
-    }
-
-    function update(req, res, next) {
-
-        console.log("Update id", req.params.id)
-
-        Recipes.findOne(function (err, doc) {
-
-            doc.recipes.pull({_id : req.params.id});
-
-            var recipeUpdate = req.body;
-            recipeUpdate._id = req.params.id;
-
-            //add new one
-            doc.recipes.push(req.body);
-
-            doc.markModified();
-
-            doc.save(function(errIn){
-                if(errIn) {
-                    throw errIn;
-                }
-                res.end();
-            });
-           // doc.recipes.set()
-        });
-
-        // Recipes.findOneAndUpdate(req.params.id, req.body, function(err, recipe){
-        //     if(err) {
-        //         console.error("Update error", recipe, err);
-        //         return next(err)
-        //     } else {
-        //         res.end();
-        //     }
-        // });
-    }
-
-    function _delete(req, res, next) {
-
-        console.log("Remove doc", req.params.id);
-
-        Recipes.findOne(function (err, doc) {
-
-            doc.recipes.pull({_id : req.params.id});
-
-            doc.markModified();
-
-            doc.save(function(errIn){
-                if(errIn) {
-                    throw errIn;
-                }
-                res.end();
-            });
-        });
-
-        // Recipes.findByIdAndRemove(req.params.id, function(err) {
-        //     if(err) {
-        //         throw err;
-        //     }
-        //     res.end();
-        // });
-
-    }
-
-    module.exports = router;
-
-})();
+module.exports = router;
