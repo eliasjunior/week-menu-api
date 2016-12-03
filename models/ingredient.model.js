@@ -9,47 +9,35 @@
 
     var Schema = mongoose.Schema;
 
-    exports.recipe = function() {
-        //
-        // weekDay: string;
-        // menus: MenuHistory [];
-        // categories : Category[]; //to display
-        // ingredient_ids: string [];
-        // mainMealValue: string;
-        // mainMeal: any;
-        // countIngredient: number;
-        // description: string;
+    var ingredientSchema = new Schema({
+        name: {
+            type: String,
+            minlength: 1,
+            trim: true,
+            required: true,
+            unique: true
+        },
+        categoryId : {
+            type : Schema.Types.ObjectId,
+            ref: 'Category'
+        },
+        quantities : [{type : Schema.Types.ObjectId, ref: 'Quantity'} ],
+        expiryDate: {
+            type: Date,
+            default: Date.now
+        },
+        //Last checking date from the shopping list after been checked
+        updateCheckDate: {
+            type: Date,
+            default: Date.now
+        },
+        //for the recipe list, ingredient that needs to buy, some ingredient is in the recipe but does not
+        //need to buy
+        shoppingSelectedItem: Boolean
+    });
 
-        var recipeSchema = new Schema({
-            name: {
-                type: String,
-                minlength: 1,
-                trim: true
-            },
-            weekDay: String,
-            checked: {
-                type: Boolean,
-                default: false
-            },
-            mainMeal : {
-                name : {
-                    type: String,
-                    minlength: 1,
-                    trim: true
-                },
-                label : String,
-                icon: String
-            },
-            countIngredient: Number,
-            description: String
-        });
+    const Ingredient = mongoose.model('Ingredient', ingredientSchema);
 
-        var recipesSchema = new Schema({
-            recipes : [recipeSchema]
-        })
-
-        return mongoose.model('Recipe', recipesSchema, 'recipes');
-    }
-
+    module.exports = {Ingredient};
 
 })();
