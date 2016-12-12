@@ -7,33 +7,39 @@ const expect = require("expect");
 
 const app = require('../../../server').app;
 
+const {Category} = require('../../../models/category.model');
 const {Ingredient} = require('../../../models/ingredient.model');
 
-var ingredients = [
-    {name : "ingredientTest"},
-    {name : "ingredientTest1"},
+var categories = [
+    {name : "categoryTest"},
+    {name : "categoryTest1"},
 ]
+
+var ingredientTestName = 'ingredient_cat name test';
 
 beforeEach((done) => {
 
-    Ingredient.remove({}).then(insertMany)
+    Category.remove({}).then(insertMany)
 
     function insertMany() {
-        Ingredient
-            .insertMany(ingredients)
-            .then(() => {
-                done();
-            })
-    }
 
+        Ingredient.remove({}).then(() => {
+
+            Category
+                .insertMany(categories)
+                .then((docs) => {
+                    done()
+                });
+        });
+    }
 });
 
-describe("Ingredient", () => {
+describe("Category", () => {
 
-    it("should get ingredient list", (done) => {
+    it("should get category list", (done) => {
 
         request(app)
-            .get('/ingredient')
+            .get('/category')
             .expect(200)
             .expect((res) => {
                 expect(res.body.length).toBe(2);
@@ -42,17 +48,17 @@ describe("Ingredient", () => {
 
     });
 
-    it('should load ingredient by passing an Id', (done) => {
+    it('should load category by passing an Id', (done) => {
 
-        var ingredient = new Ingredient({
-            name : 'ingredient name test',
+        var category = new Category({
+            name : 'category name test',
         })
 
-        ingredient.save()
+        category.save()
             .then((doc) => {
 
                 request(app)
-                    .get('/ingredient/' + doc._id)
+                    .get('/category/' + doc._id)
                     .expect(200)
                     .expect((res) => {
                         expect(res.body._id).toBe(doc._id.toString())
@@ -60,20 +66,20 @@ describe("Ingredient", () => {
             });
     });
 
-    it("should save/post a ingredient", (done) => {
+    it("should save/post a category", (done) => {
 
-        let name = 'testname ingredient';
+        let name = 'testname category';
         let id;
 
         request(app)
-            .post('/ingredient')
+            .post('/category')
             .send({'name' : name})
             .expect(201)
             .expect((res) => {
                 expect(res.body).toIncludeKey('_id');
                 id = res.body._id;
 
-                Ingredient.findOne({_id: id})
+                Category.findOne({_id: id})
                     .then((docs) => {
                         expect(docs.length).toBe(3)
 
@@ -85,15 +91,15 @@ describe("Ingredient", () => {
 
     });
 
-    it("should fail to save/post a ingredient", (done) => {
+    it("should fail to save/post a category", (done) => {
 
         request(app)
-            .post('/ingredient')
+            .post('/category')
             .expect(400)
             .expect((res) => {
                 expect(res.body).toIncludeKeys(['message', 'errors', 'name']);
 
-                Ingredient.find({})
+                Category.find({})
                     .then((docs) => {
 
                         expect(docs.length).toBe(2);
@@ -106,16 +112,16 @@ describe("Ingredient", () => {
 
     });
 
-    it("should fail to save/post a duplicate ingredient", (done) => {
+    it("should fail to save/post a duplicate category", (done) => {
 
-        var ingredient = new Ingredient({
+        var category = new Category({
             name : 'testname',
         })
 
-        ingredient.save()
+        category.save()
             .then((doc) => {
                 request(app)
-                    .post('/ingredient')
+                    .post('/category')
                     .send({name : 'testname'})
                     .expect(400)
                     .expect((res) => {
@@ -124,21 +130,21 @@ describe("Ingredient", () => {
             });
     });
 
-    it("should update a ingredient", (done) => {
+    it("should update a category", (done) => {
 
-        var ingredient = new Ingredient({
+        var category = new Category({
             name: 'testname'
         });
 
         //save first to make sure it will update it
-        ingredient.save()
+        category.save()
             .then((doc) => {
 
                 //update date
                 let nameTestUpdate = 'testnameUpdate';
 
                 request(app)
-                    .put('/ingredient')
+                    .put('/category')
                     .send({name: nameTestUpdate, _id: doc._id})
                     .expect(204)
                     .end((err, res) => {
@@ -147,7 +153,7 @@ describe("Ingredient", () => {
                             return err;
                         }
 
-                        Ingredient.findOne({_id: doc._id})
+                        Category.findOne({_id: doc._id})
                             .then((doc) => {
 
                                 expect(doc.name).toBe(nameTestUpdate);
@@ -161,19 +167,19 @@ describe("Ingredient", () => {
             });
     });
 
-    it("should delete a ingredient", (done) => {
+    it("should delete a category", (done) => {
 
-        let name = ingredients[0].name;
+        let name = categories[0].name;
 
-        Ingredient.findOne({name})
+        Category.findOne({name})
             .then((doc) => {
                 request(app)
-                    .delete('/ingredient')
+                    .delete('/category')
                     .send({_id : doc._id})
                     .expect(204)
                     .expect((res) => {
 
-                        Ingredient.find({})
+                        Category.find({})
                             .then((docs) => {
                                 expect(docs.length).toBe(1);
                             }).catch((reason) => {
@@ -184,7 +190,50 @@ describe("Ingredient", () => {
 
             });
 
-    })
+    });
 
+    it("should get category along ingredient populated", (done) => {
 
+            //IF I try do this in the beforeEach does not work!
+            Category.find({})
+                .then((cats) => {
+
+                    cats.forEach((category, index) => {
+
+                        var ingredient = new Ingredient({
+                            name : ingredientTestName + index ,
+                            _creator :  category._id
+                        });
+
+                        ingredient.save().then((ing) => {
+
+                            category.ingredients.push(ing)
+                            category.save();
+
+                            request(app)
+                                .get('/category')
+                                .expect(200)
+                                .end((err, res) => {
+
+                                    if(err) throw err
+
+                                    let categories  = res.body;
+
+                                    expect(categories.length).toBe(2);
+
+                                    console.log("CAT", categories)
+
+                                    categories.forEach( (cat) => {
+                                        expect(cat.ingredients.length).toBe(1)
+                                    });
+
+                                    if(++index === 2) {
+                                        done()
+                                    }
+                                });
+                        })
+                    })
+
+                });
+    });
 });

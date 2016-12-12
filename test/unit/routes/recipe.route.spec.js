@@ -10,6 +10,8 @@ const expect = require('expect');
 const app = require('../../../server').app;
 
 const {Recipe} = require('../../../models/recipe.model');
+const {Category} = require('../../../models/category.model');
+const {Ingredient} = require('../../../models/ingredient.model');
 
 const recipes = [
     {
@@ -22,7 +24,11 @@ const recipes = [
 beforeEach((done) => {
     Recipe.remove({})
         .then(() => {
-            return Recipe.insertMany(recipes).then(() => done());
+            Recipe.insertMany(recipes).then(() => {
+
+                done()
+
+            });
         });
 });
 
@@ -182,6 +188,142 @@ describe('Recipe', () => {
 
             });
 
-    })
+    });
 
+    it("should get recipe all recipe's ingredients along it categories", (done) => {
+
+
+        let category = new Category({
+            name: 'cat_recipe_test'
+        });
+
+        category.save()
+            .then((doc) => {
+
+                let ingredient = new Ingredient({
+                    name: 'ingredient_test_rec',
+                    _creator: doc._id
+                });
+
+                ingredient.save()
+                    .then(() => {
+
+                        findRecipeAndRequestApi();
+
+                    }).catch((reason) => {
+                        console.error(" error saving ingredient", reason)
+                    });
+            });
+
+        function findRecipeAndRequestApi() {
+            let name = recipes[0].name;
+
+            Recipe.findOne({name})
+                .then((docFindOne) => {
+
+                    docFindOne.categories.push(category)
+                    docFindOne.save()
+                        .then(() => {
+
+                            request(app)
+                                .get('/recipe/category/'+ docFindOne._id)
+                                .expect(200)
+                                .end((err, res) => {
+
+                                    if(err) {
+                                        throw err;
+                                    }
+
+                                    let recipe = res.body;
+
+                                    expect(recipe.categories.length).toBe(1)
+
+                                    done()
+
+                                });
+                        }).catch((reason) => {
+                            console.error("error saving recipe", reason)
+                        });
+
+                });
+        }
+    });
+
+
+    it("should link recipe to categories/ingredients and return it populated", (done) => {
+
+        function createCategoryToSend() {
+
+            let categories = [];
+
+            let category = new Category({
+                name: 'testCatRec'
+            });
+
+            category.save()
+                .then(() => {
+
+                    let ingredient = new Ingredient({
+                        name: 'testIngrRec'
+                    });
+
+                    ingredient.save()
+                        .then(() => {
+
+                            category.ingredients.push(ingredient);
+                            category.save()
+                                .then(() => {
+                                    categories.push(category);
+
+                                    sendRecipeAndParameters(categories);
+                                });
+
+                        });
+
+                });
+        }
+
+        function sendRecipeAndParameters(categories) {
+
+            let name = recipes[0].name;
+
+            Recipe.findOne({name})
+                .then( (recFindOne) => {
+
+                    request(app)
+                        .put('/recipe/category')
+                        .send({_id: recFindOne._id, categories : categories})
+                        .expect(204)
+                        .end((err, res) => {
+
+                            if(err) {
+                                throw err;
+                            }
+                            requestRecipePopulated(recFindOne._id)
+                        });
+                });
+
+        }
+
+        function requestRecipePopulated(id) {
+            request(app)
+                .get('/recipe/category/'+ id)
+                .expect(200)
+                .end((err, res) => {
+
+                    if(err) {
+                        throw err;
+                    }
+
+                    let recipe = res.body;
+
+                    expect(recipe.categories.length).toBe(1)
+                    expect(recipe.categories[0].ingredients.length).toBe(1);
+
+                    done()
+                });
+        }
+
+        createCategoryToSend();
+    });
 });

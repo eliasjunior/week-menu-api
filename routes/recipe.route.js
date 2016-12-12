@@ -30,12 +30,18 @@ router.get("/recipe/:id", (req, res, next) => {
 
 });
 
-router.post('/recipe', (req, res, next) => {
+router.post('/recipe', (request, res, next) => {
+
+    let recipeCommand = request.body;
 
     var recipe = new Recipe({
-        name : req.body.name,
-        weekDay: req.body.weekDay
+        name : recipeCommand.name,
+        weekDay: recipeCommand.weekDay,
+        isInMenuWeek: recipeCommand.isInMenuWeek,
+        mainMealValue: recipeCommand.mainMealValue,
+        menus: recipeCommand.menus,
     });
+
     recipe.save()
         .then((doc) => {
             handleResponse(res, doc, 201);
@@ -44,10 +50,13 @@ router.post('/recipe', (req, res, next) => {
         });
 });
 
-router.put('/recipe', (req, res, next) => {
+router.put('/recipe', (request, res, next) => {
     // ** Concept status ** use 204 No Content to indicate to the client that
     //... it doesn't need to change its current "document view".
-    Recipe.findOneAndUpdate({_id: req.body._id}, req.body)
+
+    let recipeCommand = request.body;
+
+    Recipe.findOneAndUpdate({_id: recipeCommand._id}, recipeCommand)
         .then((doc) => {
             handleResponse(res, doc, 204);
         }, (reason) => {
@@ -65,6 +74,59 @@ router.delete('/recipe', (req, res, next) => {
         });
 });
 
+router.get("/recipe/category/:id", (req, response, next) => {
+
+    Recipe
+        .findOne({_id: req.params.id})
+        .populate('categories')
+        .then((populated) => {
+
+            var options = {
+                path: 'categories.ingredients',
+                model: 'Ingredient'
+            };
+
+            Recipe.populate(populated,options)
+                .then((deepPopulated) => {
+//                  console.log("deep docSaved", deepPopulated.categories);
+
+                    handleResponse(response, deepPopulated, 200);
+
+                }).catch( (reason) => {
+                wmHandleError(response, reason);
+            });
+
+        }, (reason) => {
+            wmHandleError(response, reason);
+        });
+});
+
+router.put("/recipe/category", (request, response, next) => {
+
+    Recipe
+        .findOne({_id: request.body._id})
+        .then((recipe) => {
+
+            let categories = request.body.categories;
+
+            categories.forEach((cat) => {
+                recipe.categories.push(cat);
+            });
+
+            recipe.save()
+                .then((docSaved) => {
+                    handleResponse(response, docSaved, 204);
+
+                }).catch( (reason) => {
+                    wmHandleError(response, reason);
+                });
+
+        }, (reason) => {
+            wmHandleError(response, reason);
+        });
+});
+
+
 function handleResponse(res, doc, status) {
     res
         .status(status)
@@ -73,7 +135,7 @@ function handleResponse(res, doc, status) {
 }
 
 function wmHandleError(res, reason) {
-    log.errorExceptOnTest("handle error", reason.essage);
+    log.errorExceptOnTest("handle error", reason.message);
     var errorResponse = {
         message : reason.message,
         name: reason.name,
