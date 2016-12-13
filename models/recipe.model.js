@@ -4,12 +4,12 @@
 (function () {
     'use strict'
 
-    var mongoose = require('mongoose');
-    var Schema = mongoose.Schema;
-    var {Base} = require('./base.model');
-    var options = {discriminatorKey: 'kind'};
+    const mongoose = require('mongoose');
+    const Schema = mongoose.Schema;
+    const {Base} = require('./base.model');
+    const options = {discriminatorKey: 'kind'};
 
-    var Recipe = Base.discriminator('Recipe',
+    const Recipe = Base.discriminator('Recipe',
         new mongoose.Schema({
                 name: {
                     type: String,
@@ -18,9 +18,7 @@
                     required: true,
                     unique: true
                 },
-                categories : [
-                    {type: Schema.Types.ObjectId, ref: 'Category'}
-                ],
+                categories : [{type: Schema.Types.ObjectId, ref: 'Category'}],
                 weekDay: String,
                 isInMenuWeek: {
                     type: Boolean,
@@ -32,42 +30,5 @@
             }, options));
 
     module.exports = {Recipe};
-
-
-
-    // var mongoose = require('mongoose');
-    // var Schema = mongoose.Schema;
-    // var recipeScheme = new Schema({
-    //     name: {
-    //         type: String,
-    //         minlength: 1,
-    //         trim: true,
-    //         required: true,
-    //         unique: true
-    //     },
-    //     categories : [
-    //         {type: Schema.Types.ObjectId, ref: 'Category'}
-    //     ],
-    //     weekDay: String,
-    //     checked: {
-    //         type: Boolean,
-    //         default: false
-    //     },
-    //     mainMeal : {
-    //         name : {
-    //             type: String,
-    //             minlength: 1,
-    //             trim: true
-    //         },
-    //         label : String,
-    //         icon: String
-    //     },
-    //     countIngredient: Number,
-    //     description: String
-    // });
-    //
-    // var Recipe = mongoose.model('Recipe', recipeScheme);
-    //
-    // module.exports = {Recipe}
 
 })();

@@ -190,7 +190,7 @@ describe('Recipe', () => {
 
     });
 
-    it("should get recipe all recipe's ingredients along it categories", (done) => {
+    it("should get all recipe's ingredients along it categories", (done) => {
 
 
         let category = new Category({

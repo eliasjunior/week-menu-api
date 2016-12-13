@@ -11,8 +11,8 @@ const {Category} = require('../../../models/category.model');
 const {Ingredient} = require('../../../models/ingredient.model');
 
 var categories = [
-    {name : "categoryTest"},
-    {name : "categoryTest1"},
+    {name : "categoryTest_"},
+    {name : "categoryTest2_"},
 ]
 
 var ingredientTestName = 'ingredient_cat name test';
@@ -160,8 +160,8 @@ describe("Category", () => {
                                 done();
 
                             }).catch((reason) => {
-                            done(reason)
-                        });
+                                done(reason)
+                            });
 
                     });
             });
@@ -169,24 +169,29 @@ describe("Category", () => {
 
     it("should delete a category", (done) => {
 
-        let name = categories[0].name;
+        Category.find({})
+            .then((docs) => {
 
-        Category.findOne({name})
-            .then((doc) => {
                 request(app)
                     .delete('/category')
-                    .send({_id : doc._id})
+                    .send({_id : docs[0]._id})
                     .expect(204)
-                    .expect((res) => {
+                    .end((err, res) => {
+
+                        if(err) {
+                            console.log("ERROR", err)
+                            return
+                        }
 
                         Category.find({})
                             .then((docs) => {
                                 expect(docs.length).toBe(1);
+                                done();
                             }).catch((reason) => {
-                            done(reason)
-                        });
+                                done(reason)
+                            });
+
                     })
-                    .end(done)
 
             });
 
@@ -220,8 +225,6 @@ describe("Category", () => {
                                     let categories  = res.body;
 
                                     expect(categories.length).toBe(2);
-
-                                    console.log("CAT", categories)
 
                                     categories.forEach( (cat) => {
                                         expect(cat.ingredients.length).toBe(1)

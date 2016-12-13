@@ -5,8 +5,9 @@ const router = require('express').Router();
 
 const log = require('../utils/log.message');
 
-var {Ingredient} = require('../models/ingredient.model');
+const {Ingredient} = require('../models/ingredient.model');
 const {Category} = require('../models/category.model');
+const {IngredientRecipe} = require('../models/ingredient.recipe.model');
 
 router.get("/ingredient", (request, response, next) => {
 
@@ -32,6 +33,31 @@ router.get("/ingredient/:id", (request, res, next) => {
 
 });
 
+router.get("/ingredient/recipe/:ingredientId/:recipeId", (request, res, next) => {
+
+    log.logExceptOnTest("params", request.params.ingredientId);
+    log.logExceptOnTest("params", request.params.recipeId);
+
+    console.log("params", request.params.ingredientId);
+    console.log("params", request.params.recipeId);
+
+    IngredientRecipe.find({}).then(docs => console.log(">>>>>>", docs))
+
+    IngredientRecipe.findOne({
+        ingredientId:request.params.ingredientId,
+        recipeId:request.params.recipeId
+    })
+    .then((doc) => {
+
+        console.log("found", doc)
+
+       handleResponse(res, doc, 200);
+    }, (reason) => {
+       wmHandleError(res, reason);
+    });
+
+});
+
 router.post('/ingredient', (request, res, next) => {
 
     if( !request.body.hasOwnProperty("_creator")) {
@@ -54,8 +80,6 @@ router.post('/ingredient', (request, res, next) => {
         updateCheckDate: ingredientCommand.updateCheckDate,
         itemSelectedForShopping: ingredientCommand.itemSelectedForShopping,
         checkedInCartShopping: ingredientCommand.checkedInCartShopping,
-        quantityUnitName: ingredientCommand.quantityUnitName
-
     });
 
     ingredient.save()
@@ -85,12 +109,44 @@ router.post('/ingredient', (request, res, next) => {
 router.put('/ingredient', (request, res, next) => {
     // ** Concept status ** use 204 No Content to indicate to the client that
     //... it doesn't need to change its current "document view".
-    Ingredient.findOneAndUpdate({_id: request.body._id}, request.body)
-        .then((doc) => {
-            handleResponse(res, doc, 204);
-        }, (reason) => {
-            wmHandleError(res, reason);
-        });
+
+    let ingredientCommand = request.body;
+
+    let ingredientUpdate = {
+        name : ingredientCommand.name,
+        _creator: ingredientCommand._creator,
+        expiryDate: ingredientCommand.expiryDate,
+        updateCheckDate: ingredientCommand.updateCheckDate,
+        itemSelectedForShopping: ingredientCommand.itemSelectedForShopping,
+        checkedInCartShopping: ingredientCommand.checkedInCartShopping,
+        ingredientRecipe: ingredientCommand.ingredientRecipe
+    };
+
+     if(ingredientCommand.ingredientRecipe) {
+
+         let ingredientRecipeCommand = ingredientCommand.ingredientRecipe;
+
+         let ingredientRecipe = new IngredientRecipe({
+             labelQuantity: ingredientRecipeCommand.labelQuantity,
+             ingredientId: ingredientRecipeCommand.ingredientId,
+             recipeId: ingredientRecipeCommand.recipeId
+         });
+
+         ingredientRecipe.save()
+             .then(docSaved => {
+
+                updateIngredient(ingredientCommand._id, ingredientUpdate, res);
+
+             }).catch(reason => {
+                 console.error(reason)
+                 wmHandleError(res, reason);
+             });
+
+     } else {
+
+         updateIngredient(ingredientCommand._id, ingredientUpdate, res);
+     }
+
 });
 
 router.delete('/ingredient', (request, res, next) => {
@@ -103,6 +159,15 @@ router.delete('/ingredient', (request, res, next) => {
         });
 });
 
+function updateIngredient(id, ingredientUpdate, res) {
+
+    Ingredient.findOneAndUpdate({_id: id}, ingredientUpdate)
+        .then((doc) => {
+            handleResponse(res, doc, 204);
+        }, (reason) => {
+            wmHandleError(res, reason);
+        });
+}
 
 function handleResponse(response, doc, status) {
     response

@@ -1,20 +1,22 @@
 /**
  * Created by eliasmj on 07/12/2016.
+ *
  */
 
 (function () {
     'use strict'
 
-    var mongoose = require('mongoose');
+    const mongoose = require('mongoose');
 
-    var options = {discriminatorKey: 'kind'};
+    const options = {discriminatorKey: 'kind'};
 
-    var BaseSchema = new mongoose.Schema({
+    const BaseSchema = new mongoose.Schema({
         updateDate: Date,
-        insertDate: Date
+        insertDate: Date,
+        name: String
     }, options);
 
-    var Base = mongoose.model('Base', BaseSchema);
+    const Base = mongoose.model('Base', BaseSchema);
 
     module.exports = {Base};
 

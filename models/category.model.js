@@ -19,9 +19,8 @@
                 unique: true,
                 required: true,
             },
-            ingredients : [
-                {type : Schema.Types.ObjectId, ref: 'Ingredient'}
-            ]
+            ingredients : [{type : Schema.Types.ObjectId, ref: 'Ingredient'}],
+            recipes: [{type : Schema.Types.ObjectId, ref: 'Recipe'}]
 
         }, options));
 
