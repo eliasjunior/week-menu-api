@@ -15,12 +15,13 @@
             labelQuantity: {
                 type: String
             },
-            ingredientId : {type : Schema.Types.ObjectId, ref: 'Ingredient'},
-            recipeId : {type : Schema.Types.ObjectId, ref: 'Recipe'},
+            name: String,
+            quantity: Number,
+            itemSelectedForShopping: Boolean,
+            ingredientId : {type : Schema.Types.ObjectId, ref: 'Ingredient', required: true},
+            recipeId : {type : Schema.Types.ObjectId, ref: 'Recipe', required: true},
 
         }, options));
 
     module.exports = {IngredientRecipe};
-
-    
 })();

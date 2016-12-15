@@ -34,7 +34,6 @@
             },
             //for the recipe list, ingredient that needs to buy, some ingredient is in the recipe but does not
             //need to buy
-            itemSelectedForShopping: Boolean,
             checkedInCartShopping: Boolean,
         }, options));
 
