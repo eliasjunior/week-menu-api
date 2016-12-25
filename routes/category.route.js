@@ -7,6 +7,66 @@ const router = require('express').Router();
 const log = require('../utils/log.message');
 
 const {Category} = require('../models/category.model');
+const {Recipe} = require('../models/recipe.model');
+
+
+router.get("/category/check/:recipeId", (request, response, next) => {
+
+    Category.find()
+        .populate('ingredients')
+        .then(categories => {
+            linkRecipeToIngredients(categories);
+
+        }, (reason) => {
+            wmHandleError(response, reason);
+        });
+
+        function linkRecipeToIngredients(categories){
+
+            Recipe.findOne({_id: request.params.recipeId})
+                .populate('categories')
+                .then(recipe => {
+
+                    let options = {
+                        path: 'categories.ingredients',
+                        model: 'Ingredient'
+                    };
+
+                    Recipe.populate(recipe, options)
+                        .then(deepRecipe => {
+
+                           // console.log("****** REC DEEP ", categories)
+
+                            categories.forEach(cat => {
+
+                                cat.ingredients.forEach(ingToBeSend => {
+
+                                    deepRecipe.categories.forEach(recCategory => {
+                                        let recipe = recCategory.ingredients.find(recipeIngredient => recipeIngredient._id = ingToBeSend._id)
+
+                                        if(recipe){
+                                            ingToBeSend.tempRecipeLinkIndicator = true;
+
+
+
+                                           // console.log("ing to send", ing);
+                                           // console.log("******************", ing.tempRecipeLinkIndicator);
+                                        }
+
+                                    });
+                                });
+                            });
+
+                            handleResponse(response, categories, 200);
+                        });
+
+                   // console.log("****** CAT UPDATED", categories)
+
+
+
+                }).catch(reason => wmHandleError(response, reason));
+        }
+});
 
 router.get("/category", (request, response, next) => {
 

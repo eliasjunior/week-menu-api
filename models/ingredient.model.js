@@ -10,32 +10,37 @@
     var {Base} = require('./base.model');
     var options = {discriminatorKey: 'kind'};
 
-    var Ingredient = Base.discriminator('Ingredient',
-        new mongoose.Schema({
-            name: {
-                type: String,
-                minlength: 1,
-                trim: true,
-                required: true,
-                unique: true
-            },
-            _creator : {
-                type : Schema.Types.ObjectId,
-                ref: 'Category'
-            },
-            expiryDate: {
-                type: Date,
-                default: Date.now
-            },
-            //Last checking date from the shopping list after been checked
-            updateCheckDate: {
-                type: Date,
-                default: Date.now
-            },
-            //for the recipe list, ingredient that needs to buy, some ingredient is in the recipe but does not
-            //need to buy
-            checkedInCartShopping: Boolean,
-        }, options));
+    const ingredientSchema = new mongoose.Schema({
+        name: {
+            type: String,
+            minlength: 1,
+            trim: true,
+            required: true,
+            unique: true
+        },
+        _creator : {
+            type : Schema.Types.ObjectId,
+            ref: 'Category'
+        },
+        expiryDate: {
+            type: Date,
+            default: Date.now
+        },
+        //Last checking date from the shopping list after been checked
+        updateCheckDate: {
+            type: Date,
+            default: Date.now
+        },
+        //for the recipe list, ingredient that needs to buy, some ingredient is in the recipe but does not
+        //need to buy
+        checkedInCartShopping: Boolean,
+    }, options);
+
+    ingredientSchema.virtual('tempRecipeLinkIndicator').get(() => {
+       return
+    });
+
+    var Ingredient = Base.discriminator('Ingredient',ingredientSchema);
 
 
     module.exports = {Ingredient};

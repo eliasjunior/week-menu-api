@@ -14,8 +14,9 @@ var db  = require('./db/mongoose');
 var bodyParser = require('body-parser');
 
 var logger = function(request, response, next) {
-    log.errorExceptOnTest("Request body", request.body);
-    log.errorExceptOnTest("Request Path", request.path);
+    log.logExceptOnTest("body: ", request.body);
+    log.logExceptOnTest("METHOD: ", request.method);
+    log.logExceptOnTest("resource: ", request.path);
     next();
 }
 

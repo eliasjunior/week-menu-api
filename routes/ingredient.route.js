@@ -8,7 +8,7 @@ const log = require('../utils/log.message');
 
 const {Ingredient} = require('../models/ingredient.model');
 const {Category} = require('../models/category.model');
-const {IngredientRecipe} = require('../models/ingredient.recipe.model');
+const {IngredientRecipeAttributes} = require('../models/ingredient.recipe.attributes.model');
 
 router.get("/ingredient", (request, response, next) => {
 
@@ -39,7 +39,7 @@ router.get("/ingredient/recipe/:ingredientId/:recipeId", (request, res, next) =>
     log.logExceptOnTest("params", request.params.ingredientId);
     log.logExceptOnTest("params", request.params.recipeId);
 
-    IngredientRecipe.findOne({
+    IngredientRecipeAttributes.findOne({
         ingredientId:request.params.ingredientId,
         recipeId:request.params.recipeId
     })
@@ -56,7 +56,7 @@ router.post('/ingredient', (request, res, next) => {
     validate(request)
         .then(saveIngredient)
         .then(saveAttributes)
-        .then(findCategoryAndPopulate)
+        .then(findCategoryAndAddToIt)
         .then(ingredient => {
             handleResponse(res, ingredient, 201);
         }).catch((reason) => {
@@ -69,7 +69,7 @@ router.post('/ingredient', (request, res, next) => {
 
         let ingredientRequest = request.body.ingredient;
 
-        var ingredient = new Ingredient({
+        let ingredient = new Ingredient({
             name : ingredientRequest.name,
             _creator: ingredientRequest._creator,
             expiryDate: ingredientRequest.expiryDate,
@@ -98,18 +98,19 @@ router.post('/ingredient', (request, res, next) => {
         let deferred = Q.defer();
 
         let ingredientId = result.ingredient._id;
-        let attributes = result.ingredientCommand.ingredientRecipe;
+        let attributes = result.ingredientCommand.ingredientRecipeAttributes;
 
         if(attributes) {
 
-            let ingredientRecipe = new IngredientRecipe({
+            let ingredientRecipeAttributes = new IngredientRecipeAttributes({
                 labelQuantity: attributes.labelQuantity,
+                quantity: attributes.quantity,
                 ingredientId: ingredientId,
                 recipeId: attributes.recipeId,
                 name: 'attributes_' + new Date().getTime()
             });
 
-            ingredientRecipe.save()
+            ingredientRecipeAttributes.save()
                 .then(() => {
 
                     deferred.resolve(result.ingredient);
@@ -123,23 +124,7 @@ router.post('/ingredient', (request, res, next) => {
         return deferred.promise;
     }
 
-    function findCategoryAndPopulate(ingredient) {
 
-        let deferred = Q.defer();
-
-        Category.findOne({_id: ingredient._creator})
-            .then((cat) => {
-
-                cat.ingredients.push(ingredient);
-
-                cat.save()
-                    .then( doc => deferred.resolve(ingredient))
-                    .catch(reason => deferred.reject(reason));
-
-             }).catch(reason => deferred.reject(reason));
-
-        return deferred.promise;
-    }
 
     function validate(request) {
 
@@ -187,55 +172,79 @@ router.put('/ingredient', (request, res, next) => {
 
     let ingredientCommand = request.body;
 
-    let ingredientUpdate = {
-        name : ingredientCommand.name,
-        _creator: ingredientCommand._creator,
-        expiryDate: ingredientCommand.expiryDate,
-        updateCheckDate: ingredientCommand.updateCheckDate,
-        itemSelectedForShopping: ingredientCommand.itemSelectedForShopping,
-        checkedInCartShopping: ingredientCommand.checkedInCartShopping,
-        ingredientRecipe: ingredientCommand.ingredientRecipe,
-        _id: ingredientCommand._id
-    };
+    if(ingredientCommand.ingredientRecipeAttributes) {
 
-    if(ingredientCommand.ingredientRecipe) {
-
-         let ingredientRecipeCommand = ingredientCommand.ingredientRecipe;
-
-        //Workaround to index unique bug, discriminators
-        //name: 'attributes_'+new Date().getTime()
-         let ingredientRecipe = new IngredientRecipe({
-             labelQuantity: ingredientRecipeCommand.labelQuantity,
-             ingredientId: ingredientRecipeCommand.ingredientId,
-             recipeId: ingredientRecipeCommand.recipeId,
-             name: 'attributes_'+new Date().getTime()
-         });
-
-         //TODO refactor here, manipulate the result to the callback
-        updateIngredient(ingredientUpdate)
-            .then((docParent) => {
-
-                ingredientRecipe.save()
-                    .then(() => {
-
-                        handleResponse(res, docParent, 204);
-
-                    }).catch(reason => {
-                        wmHandleError(res, reason);
-                     });
-
-            }).catch(reason => {
-                wmHandleError(res, reason);
-            });
+        updateIngredient(ingredientCommand)
+            .then(updateAttributes)
+            .then(findCategoryAndAddToIt)
+            .then(doc => {
+                handleResponse(res, doc, 204)
+            })
+            .catch(reason => wmHandleError(res, reason));
 
     } else {
-
-         updateIngredient(ingredientUpdate)
-             .then((doc) => handleResponse(res, doc, 204) )
-             .catch(reason => {
-                 wmHandleError(res, reason);
-             });
+         updateIngredient(ingredientCommand)
+             .then(doc => {
+                findCategoryAndAddToIt(doc.doc)
+                    .then(doc =>  handleResponse(res, doc, 204));
+             })
+             .catch(reason => wmHandleError(res, reason));
     }
+
+
+    function updateIngredient(ingredientCommand) {
+
+        let deferred = Q.defer();
+        let result = {
+            ingredientCommand: ingredientCommand,
+            doc: null
+        }
+
+        Ingredient.findOneAndUpdate({_id: ingredientCommand.ingredient._id}, ingredientCommand.ingredient)
+            .then(() => {
+
+                result.doc = ingredientCommand.ingredient;
+
+                deferred.resolve(result);
+
+            }, (reason) => deferred.reject(reason));
+
+        return deferred.promise;
+    }
+
+    function updateAttributes(result) {
+        let deferred = Q.defer();
+
+        let attributesRequest = result.ingredientCommand.ingredientRecipeAttributes;
+
+        if(attributesRequest._id) {
+
+            IngredientRecipeAttributes.findOneAndUpdate({_id: attributesRequest._id}, attributesRequest)
+                .then(() => {
+                    deferred.resolve(result.doc);
+                }).catch(reason => deferred.reject(reason));
+
+        } else {
+
+            //Workaround to index unique bug, discriminators
+            //name: 'attributes_'+new Date().getTime()
+            let ingredientRecipeAttributes = new IngredientRecipeAttributes({
+                labelQuantity: attributesRequest.labelQuantity,
+                quantity: attributesRequest.quantity,
+                ingredientId: attributesRequest.ingredientId,
+                recipeId: attributesRequest.recipeId,
+                name: 'attributes_'+new Date().getTime()
+            });
+
+            ingredientRecipeAttributes.save()
+                .then(() => {
+                    deferred.resolve(result.doc);
+                }).catch(reason => deferred.reject(reason));
+        }
+
+        return deferred.promise;
+    }
+
 
 });
 
@@ -249,19 +258,28 @@ router.delete('/ingredient', (request, res, next) => {
         });
 });
 
-function updateIngredient(ingredientUpdate) {
+
+function findCategoryAndAddToIt(ingredient) {
 
     let deferred = Q.defer();
 
-    Ingredient.findOneAndUpdate({_id: ingredientUpdate._id}, ingredientUpdate)
-        .then((doc) => {
+    Category.findOne({_id: ingredient._creator})
+        .then((cat) => {
 
-            deferred.resolve(doc);
+            cat.ingredients.push(ingredient);
 
-        }, (reason) => deferred.reject(reason));
+            cat.save()
+                .then( doc => deferred.resolve(ingredient))
+                .catch(reason => deferred.reject(reason));
+
+        }).catch(reason => {
+             deferred.reject(reason)
+        });
 
     return deferred.promise;
 }
+
+
 
 function handleResponse(response, doc, status) {
     response

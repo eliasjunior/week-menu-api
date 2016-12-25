@@ -15,20 +15,22 @@ const {Ingredient} = require('../../../models/ingredient.model');
 
 const recipes = [
     {
-        name: 'testname1'
+        name: 'from_rec_spec_testname1'
     },
     {
-        name: 'testname2'
+        name: 'from_rec_spec_testname2'
     }];
 
 beforeEach((done) => {
-    Recipe.remove({})
+
+    Recipe.remove({name : 'from_rec_spec_testname1'})
         .then(() => {
-            Recipe.insertMany(recipes).then(() => {
-
-                done()
-
-            });
+            Recipe.remove( {name : 'from_rec_spec_testname2'})
+                .then( () => {
+                    Recipe.insertMany(recipes).then(() => {
+                        done();
+                    });
+                });
         });
 });
 
@@ -48,121 +50,110 @@ describe('Recipe', () => {
 
     it('should load recipe by passing an Id', (done) => {
 
-        var recipe = new Recipe({
-            name : 'testname',
-        })
-
-        recipe.save()
-            .then((doc) => {
+        Recipe.findOne({name : recipes[0].name}).then(rec => {
 
                 request(app)
-                    .get('/recipe/' + doc._id)
+                    .get('/recipe/' + rec._id)
                     .expect(200)
                     .expect((res) => {
-                        expect(res.body._id).toBe(doc._id.toString())
-                    }).end(done)
-            });
+                        expect(res.body._id).toBe(rec._id.toString())
+                    }).end(done);
+        });
+
+
     });
 
     it("should save/post a recipe", (done) => {
 
-        let name = 'testname';
+        let name = 'rec_spec_post';
         let id;
 
-        request(app)
-            .post('/recipe')
-            .send({'name' : name})
-            .expect(201)
-            .expect((res) => {
-                expect(res.body).toIncludeKey('_id');
-                id = res.body._id;
+        Recipe.remove({name}).then( () => {
+            request(app)
+                .post('/recipe')
+                .send({'name' : name})
+                .expect(201)
+                .expect((res) => {
+                    expect(res.body).toIncludeKey('_id');
+                    id = res.body._id;
 
-                Recipe.findOne({_id: id})
-                    .then((docs) => {
-                        expect(docs.length).toBe(3)
+                    Recipe.findOne({_id: id})
+                        .then((docs) => {
+                            expect(docs.length).toBe(3)
 
-                    }).catch((reason) => {
+                        }).catch((reason) => {
                         return reason
                     });
-            })
-            .end(done);
-
+                })
+                .end(done);
+        });
     });
 
-    it("should fail to save/post a recipe", (done) => {
+    it("should fail to save/post a recipe, empty name", (done) => {
 
         request(app)
             .post('/recipe')
             .expect(400)
-            .expect((res) => {
-                expect(res.body).toIncludeKeys(['message', 'errors', 'name']);
+            .end((err, res) => {
+
+                if (err) return done(err);
 
                 Recipe.find({})
                     .then((docs) => {
 
-                        expect(docs.length).toBe(2)
+                        expect(res.body).toIncludeKeys(['message', 'errors', 'name']);
+                        done();
 
                     }).catch((reason) => {
-                        return reason
+                        done(reason);
                     });
-            })
-            .end(done);
+            });
 
     });
 
     it("should fail to save/post a duplicate recipe", (done) => {
 
-        var recipe = new Recipe({
-            name : 'testname',
-        })
-
-        recipe.save()
-            .then((doc) => {
-                request(app)
-                    .post('/recipe')
-                    .send({name : 'testname'})
-                    .expect(400)
-                    .expect((res) => {
-                        expect(res.body.message).toInclude('duplicate key error')
-                    }).end(done)
-            });
+            request(app)
+                .post('/recipe')
+                .send({name : recipes[0].name})
+                .expect(400)
+                .expect((res) => {
+                    expect(res.body.message).toInclude('duplicate key error')
+                }).end(done)
     });
 
     it("should update a recipe", (done) => {
 
-        var recipe = new Recipe({
-            name: 'testname'
+        //update date
+        let nameTestUpdate = 'testnameUpdate';
+
+        Recipe.remove({name: nameTestUpdate})
+            .then(() => {
+
+                Recipe.findOne({name: recipes[0].name})
+                    .then(rec => {
+
+                        request(app)
+                            .put('/recipe')
+                            .send({name: nameTestUpdate, _id: rec._id})
+                            .expect(204)
+                            .end((err, res) => {
+
+                                if (err) return done(err);
+
+                                Recipe.findOne({_id: rec._id})
+                                    .then((doc) => {
+
+                                        expect(doc.name).toBe(nameTestUpdate);
+                                        done();
+
+                                    }).catch((reason) => {
+                                    done(reason)
+                                });
+                            });
+                    });
         });
 
-        //save first to make sure it will update it
-        recipe.save()
-            .then((doc) => {
-
-                //update date
-                let nameTestUpdate = 'testnameUpdate';
-
-                request(app)
-                    .put('/recipe')
-                    .send({name: nameTestUpdate, _id: doc._id})
-                    .expect(204)
-                    .end((err, res) => {
-
-                        if(err) {
-                            return err;
-                        }
-
-                        Recipe.findOne({_id: doc._id})
-                            .then((doc) => {
-
-                                expect(doc.name).toBe(nameTestUpdate);
-                                done()
-
-                            }).catch((reason) => {
-                                done(reason)
-                            });
-
-                    });
-            });
     });
 
     it("should delete a recipe", (done) => {
@@ -179,7 +170,12 @@ describe('Recipe', () => {
 
                         Recipe.find({})
                             .then((docs) => {
-                                expect(docs.length).toBe(1);
+
+                                Recipe.findOne({name})
+                                    .then(result => {
+                                        expect(result).toBe(null);
+                                    });
+
                             }).catch((reason) => {
                                 done(reason)
                             });
@@ -230,9 +226,7 @@ describe('Recipe', () => {
                                 .expect(200)
                                 .end((err, res) => {
 
-                                    if(err) {
-                                        throw err;
-                                    }
+                                    if (err) return done(err);
 
                                     let recipe = res.body;
 
@@ -296,9 +290,8 @@ describe('Recipe', () => {
                         .expect(204)
                         .end((err, res) => {
 
-                            if(err) {
-                                throw err;
-                            }
+                            if (err) return done(err);
+
                             requestRecipePopulated(recFindOne._id)
                         });
                 });
@@ -311,9 +304,7 @@ describe('Recipe', () => {
                 .expect(200)
                 .end((err, res) => {
 
-                    if(err) {
-                        throw err;
-                    }
+                    if (err) return done(err);
 
                     let recipe = res.body;
 

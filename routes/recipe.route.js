@@ -87,7 +87,7 @@ router.get("/recipe/category/:id", (req, response, next) => {
             };
 
             Recipe.populate(populated,options)
-                .then((deepPopulated) => {
+                .then(deepPopulated => {
 //                  console.log("deep docSaved", deepPopulated.categories);
 
                     handleResponse(response, deepPopulated, 200);
@@ -105,7 +105,7 @@ router.put("/recipe/category", (request, response, next) => {
 
     Recipe
         .findOne({_id: request.body._id})
-        .then((recipe) => {
+        .then(recipe => {
 
             let categories = request.body.categories;
 

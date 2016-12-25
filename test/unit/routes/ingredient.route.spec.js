@@ -10,16 +10,18 @@ const app = require('../../../server').app;
 const {Ingredient} = require('../../../models/ingredient.model');
 const {Category} = require('../../../models/category.model');
 const {Recipe} = require('../../../models/recipe.model');
-const {IngredientRecipe} = require('../../../models/ingredient.recipe.model');
+const {IngredientRecipeAttributes} = require('../../../models/ingredient.recipe.attributes.model');
 
 const categories = [
-    {name : "categoryTest"},
-    {name : "categoryTest1"}
+    {name : "categoryTest_Before"},
+    {name : "categoryTest1_before"}
 ];
+
+const recipeName = 'recipe_test_ingredients';
 
 const Q = require('q');
 
-const ingredientTestName = 'ingredient name test';
+const ingredientTestName = 'ingredient name test_global';
 
 beforeEach((done) => {
 
@@ -28,13 +30,12 @@ beforeEach((done) => {
 
     function insertManyCat() {
 
-        IngredientRecipe.remove({})
+        IngredientRecipeAttributes.remove({})
             .then(removedIngredient)
             .then(insertManyCategory)
             .then(saveRecipe)
             .then(saveIngredients)
             .then(saveAttributesRecipes)
-
 
         function removedIngredient() {
 
@@ -93,10 +94,10 @@ beforeEach((done) => {
         }
 
         function saveAttributesRecipes(paramResult) {
-            IngredientRecipe.remove({})
+            IngredientRecipeAttributes.remove({})
                 .then(() => {
 
-                    let ingRecipe = new IngredientRecipe({
+                    let ingRecipe = new IngredientRecipeAttributes({
                         labelQuantity: 'kg',
                         name: 'porcaria',
                         ingredientId: paramResult.ingredientIds[0],
@@ -112,11 +113,11 @@ beforeEach((done) => {
 
             let deferred = Q.defer();
 
-            Recipe.remove({})
+            Recipe.remove({name: recipeName})
                 .then(docR => {
 
                     let recipe = new Recipe({
-                        name: 'recipe_test_ingredients'
+                        name: recipeName
                     });
 
                     recipe.save().then(docRec => {
@@ -135,7 +136,6 @@ beforeEach((done) => {
                 })
 
             return deferred.promise;
-
         }
     }
 });
@@ -182,10 +182,10 @@ describe("Ingredient", () => {
                     .expect(200)
                     .expect((res) => {
 
-                        let ingredientRecipe = res.body;
+                        let ingredientRecipeAttributes = res.body;
 
-                        expect(ingredientRecipe.ingredientId).toBe(result.ingredientId.toString());
-                        expect(ingredientRecipe.recipeId).toBe(result.recipeId.toString());
+                        expect(ingredientRecipeAttributes.ingredientId).toBe(result.ingredientId.toString());
+                        expect(ingredientRecipeAttributes.recipeId).toBe(result.recipeId.toString());
                     }).end(done)
 
             });
@@ -206,7 +206,7 @@ describe("Ingredient", () => {
                                 name : 'testname ingredient',
                                 _creator : categoryId
                             },
-                            ingredientRecipe : {
+                            ingredientRecipeAttributes : {
                                 labelQuantity: 'kg',
                                 recipeId: recipeId,
                             }
@@ -218,7 +218,7 @@ describe("Ingredient", () => {
                             .expect(201)
                             .end((err, res) => {
 
-                                if (err) throw err;
+                                if (err) return done(err);
 
                                 findIngredient(res, categoryId, recipeId)
                                     .then(findAttributes)
@@ -275,7 +275,7 @@ describe("Ingredient", () => {
 
                 function findAttributes(result) {
 
-                    IngredientRecipe.findOne({ingredientId: result.ingredientId, recipeId: result.recipeId})
+                    IngredientRecipeAttributes.findOne({ingredientId: result.ingredientId, recipeId: result.recipeId})
                         .then(attr => {
 
                             expect(attr.recipeId.toString()).toBe(result.recipeId.toString());
@@ -317,7 +317,7 @@ describe("Ingredient", () => {
             .then( (docs) => {
 
                 let ingredient = new Ingredient({
-                    name : 'testname',
+                    name : 'ingre_spec_testname',
                     _creator : docs[0]._id
                 })
 
@@ -348,44 +348,56 @@ describe("Ingredient", () => {
     });
 
 
-    it("should update a ingredient", (done) => {
+    it("should UPDATE a ingredient", (done) => {
 
-        var ingredient = new Ingredient({
-            name: 'testname'
-        });
+        Category.find({}).then(cats => {
 
-        //save first to make sure it will update it
-        ingredient.save()
-            .then((doc) => {
+            let cat = cats[0];
 
-                //update date
-                let nameTestUpdate = 'testnameUpdate';
+            let ingredient = new Ingredient({
+                name: 'ingre_spec_testname2',
+                _creator : cat._id
+            });
 
-                request(app)
-                    .put('/ingredient')
-                    .send({name: nameTestUpdate, _id: doc._id})
-                    .expect(204)
-                    .end((err, res) => {
+            //save first to make sure it will update it
+            ingredient.save()
+                .then((doc) => {
 
-                        if(err) {
-                            return err;
+                    //update date
+                    let ingredientCommand = {
+                        ingredient : {
+                            name : 'ttestnameUpdate',
+                            _id : doc._id,
+                            _creator: doc._creator
                         }
+                    };
 
-                        Ingredient.findOne({_id: doc._id})
-                            .then((doc) => {
+                    request(app)
+                        .put('/ingredient')
+                        .send(ingredientCommand)
+                        .expect(204)
+                        .end((err, res) => {
 
-                                expect(doc.name).toBe(nameTestUpdate);
-                                done();
+                            if (err) return done(err);
 
-                            }).catch((reason) => {
+                            Ingredient.findOne({_id: doc._id})
+                                .then((doc) => {
+
+                                    expect(doc.name).toBe(ingredientCommand.ingredient.name);
+                                    done();
+
+                                }).catch((reason) => {
                                 done(reason)
                             });
 
-                    });
-            });
+                        });
+                });
+        })
+
+
     });
 
-    it("should save ingredient and save recipes attributes", (done) => {
+    it("should update ingredient and save recipes attributes", (done) => {
 
         //save first to make sure it will update
 
@@ -393,6 +405,7 @@ describe("Ingredient", () => {
             .then((docs) => {
 
                 let ingredient = docs[0];
+
 
                 Recipe.find({})
                     .then((recs) => {
@@ -406,13 +419,17 @@ describe("Ingredient", () => {
                         }
 
                         let ingCommand = {
-                            name : ingredient.name,
-                            _creator: ingredient._creator,
-                            expiryDate: ingredient.expiryDate,
-                            updateCheckDate: ingredient.updateCheckDate,
-                            itemSelectedForShopping: ingredient.itemSelectedForShopping,
-                            checkedInCartShopping: ingredient.checkedInCartShopping,
-                            ingredientRecipe: ingredientRecipeCommand
+                            ingredient: {
+                                name : ingredient.name,
+                                _id:ingredient._id,
+                                _creator: ingredient._creator,
+                                expiryDate: ingredient.expiryDate,
+                                updateCheckDate: ingredient.updateCheckDate,
+                                itemSelectedForShopping: ingredient.itemSelectedForShopping,
+                                checkedInCartShopping: ingredient.checkedInCartShopping,
+                            },
+
+                            ingredientRecipeAttributes: ingredientRecipeCommand
                         }
 
                         request(app)
@@ -421,11 +438,9 @@ describe("Ingredient", () => {
                             .expect(204)
                             .end((err, res) => {
 
-                                if(err) {
-                                    return err;
-                                }
+                                if (err) return done(err);
 
-                                IngredientRecipe.findOne({recipeId: recipeId, ingredientId:ingredient._id})
+                                IngredientRecipeAttributes.findOne({recipeId: recipeId, ingredientId:ingredient._id})
                                     .then((doc) => {
 
                                         expect(doc.labelQuantity).toBe(ingredientRecipeCommand.labelQuantity);
@@ -473,7 +488,7 @@ describe("Ingredient", () => {
             ingredientId: ''
         }
 
-        IngredientRecipe.find({})
+        IngredientRecipeAttributes.find({})
             .then( recs => {
                 result.recipeId = recs[0].recipeId;
                 result.ingredientId = recs[0].ingredientId

@@ -10,7 +10,7 @@
     const {Base} = require('./base.model');
     const options = {discriminatorKey: 'kind'};
 
-    const IngredientRecipe = Base.discriminator('IngredientRecipe',
+    const IngredientRecipeAttributes = Base.discriminator('IngredientRecipeAttributes',
         new mongoose.Schema({
             labelQuantity: {
                 type: String
@@ -23,5 +23,5 @@
 
         }, options));
 
-    module.exports = {IngredientRecipe};
+    module.exports = {IngredientRecipeAttributes};
 })();
