@@ -12,21 +12,49 @@ const {Category} = require('../../../models/category.model');
 const {Recipe} = require('../../../models/recipe.model');
 const {IngredientRecipeAttributes} = require('../../../models/ingredient.recipe.attributes.model');
 
-const categories = [
-    {name : "categoryTest_Before"},
-    {name : "categoryTest1_before"}
+const categoryNames = [
+    "from_Ingr_categoryTest0",
+    "from_Ingr_categoryTest1"
 ];
 
-const recipeName = 'recipe_test_ingredients';
+const ingredientNames = [
+    "from_Ingr_ingredietTest0",
+    "from_Ingr_ingredietTest1",
+    "from_Ingr_ingredietTest2",
+    "from_Ingr_ingredietTest3",
+    "from_Ingr_ingredietTest4",
+    "from_Ingr_ingredietTest5",
+    "from_Ingr_ingredietTest6",
+    "from_Ingr_ingredietTest7",
+    "from_Ingr_ingredietTest8"
+];
+
+const categories = [
+    {name : categoryNames[0]},
+    {name : categoryNames[1]}
+];
+
+const recipeName = 'global_recipe_from_ingredients';
+
+const attributeName = 'global_attribute_name';
 
 const Q = require('q');
 
-const ingredientTestName = 'ingredient name test_global';
-
 beforeEach((done) => {
 
-    Category.remove({})
-        .then(insertManyCat)
+    let count_names = categoryNames.length;
+
+    categoryNames.forEach(name => {
+
+        Category.remove({name})
+            .then(() => {
+
+                if(--count_names === 0) {
+                    insertManyCat();
+                }
+            });
+    });
+
 
     function insertManyCat() {
 
@@ -39,7 +67,20 @@ beforeEach((done) => {
 
         function removedIngredient() {
 
-            return Ingredient.remove({})
+            let count = ingredientNames.length;
+
+            ingredientNames.forEach(name => {
+                Ingredient.remove({name})
+                    .then(() => {
+
+                        if(--count === 0) {
+                            let deferred = Q.defer();
+                            deferred.resolve({});
+                            return deferred.promise;
+                        }
+
+                    });
+            });
         }
 
         function insertManyCategory() {
@@ -56,7 +97,7 @@ beforeEach((done) => {
 
                     deferred.resolve(result);
 
-                }).catch((reason) => deferred.reject(reason))
+                }).catch((reason) => deferred.reject(reason));
 
             return deferred.promise;
 
@@ -75,7 +116,7 @@ beforeEach((done) => {
             paramResult.docs.forEach(function(item, index){
 
                 let ingredient = new Ingredient({
-                    name : ingredientTestName + index,
+                    name : ingredientNames[index],
                     _creator :  item._id
                 });
 
@@ -99,12 +140,14 @@ beforeEach((done) => {
 
                     let ingRecipe = new IngredientRecipeAttributes({
                         labelQuantity: 'kg',
-                        name: 'porcaria',
+                        name: attributeName,
                         ingredientId: paramResult.ingredientIds[0],
-                        recipeId: paramResult.recipeId
+                        recipeId: paramResult.recipeId,
+                        itemSelectedForShopping: true
+
                     })
 
-                    ingRecipe.save().then(docIngR => { done() });
+                    ingRecipe.save().then(() => { done() });
                 })
                 .catch(reason => done())
         }
@@ -148,28 +191,26 @@ describe("Ingredient", () => {
             .get('/ingredient')
             .expect(200)
             .expect((res) => {
-                expect(res.body.length).toBe(2);
+                expect(res.body.length > 1).toBe(true);
             })
             .end(done);
-
     });
 
     it('should load ingredient by passing an Id', (done) => {
 
-        var ingredient = new Ingredient({
-            name : 'ingredient name test',
-        })
+        const ingredient = new Ingredient({
+            name : ingredientNames[3],
+        });
 
         ingredient.save()
             .then((doc) => {
-
                 request(app)
                     .get('/ingredient/' + doc._id)
                     .expect(200)
                     .expect((res) => {
-                        expect(res.body._id).toBe(doc._id.toString())
+                        expect(res.body._id).toBe(doc._id.toString());
                     }).end(done)
-            });
+            }).catch(err => done(err));
     });
 
     it('should load ingredient/attributes', (done) => {
@@ -191,6 +232,22 @@ describe("Ingredient", () => {
             });
     });
 
+    it("should load all ingredients/attributes of a specific recipe", done => {
+
+        Recipe.findOne({name: recipeName}).then(rec => {
+
+            request(app)
+                .get('/ingredient/recipe/'+rec._id)
+                .expect(200)
+                .expect(res => {
+                    let attributeList = res.body;
+
+                    expect(attributeList[0].itemSelectedForShopping).toBe(true);
+                })
+                .end(done)
+        });
+    });
+
     it("should save a ingredient", (done) => {
 
         Category.find({})
@@ -203,7 +260,7 @@ describe("Ingredient", () => {
 
                         let ingredientCommand = {
                             ingredient : {
-                                name : 'testname ingredient',
+                                name : ingredientNames[2],
                                 _creator : categoryId
                             },
                             ingredientRecipeAttributes : {
@@ -220,8 +277,8 @@ describe("Ingredient", () => {
 
                                 if (err) return done(err);
 
-                                findIngredient(res, categoryId, recipeId)
-                                    .then(findAttributes)
+                                findIngredientTestIt(res, categoryId, recipeId)
+                                    .then(findAttributesAndTestIt)
                             });
 
                     }).catch((reason) => {
@@ -246,7 +303,7 @@ describe("Ingredient", () => {
                     return deferred.promise;
                 }
 
-                function findIngredient(res, categoryId, recipeId) {
+                function findIngredientTestIt(res, categoryId, recipeId) {
 
                     let deferred = Q.defer();
 
@@ -257,6 +314,7 @@ describe("Ingredient", () => {
 
                             expect(res.body).toIncludeKey('_id');
                             expect(ingred._creator).toEqual(categoryId);
+                            expect(ingred.attributes.length > 0).toBe(true);
 
                             let result = {
                                 recipeId : recipeId,
@@ -273,7 +331,7 @@ describe("Ingredient", () => {
                     return deferred.promise;
                 }
 
-                function findAttributes(result) {
+                function findAttributesAndTestIt(result) {
 
                     IngredientRecipeAttributes.findOne({ingredientId: result.ingredientId, recipeId: result.recipeId})
                         .then(attr => {
@@ -313,20 +371,22 @@ describe("Ingredient", () => {
 
     it("should fail to save/post a duplicate ingredient", (done) => {
 
+        let ingredietName = ingredientNames[3];
+
         Category.find({})
             .then( (docs) => {
 
                 let ingredient = new Ingredient({
-                    name : 'ingre_spec_testname',
+                    name : ingredietName,
                     _creator : docs[0]._id
                 })
 
                 ingredient.save()
-                    .then((doc) => {
+                    .then(() => {
 
                         request(app)
                             .post('/ingredient')
-                            .send({ingredient: {name : 'testname', _creator : docs[0]._id}})
+                            .send({ingredient: {name : ingredietName, _creator : docs[0]._id}})
                             .expect(400)
                             .expect((res) => {
                                 expect(res.body.message).toInclude('duplicate key error')
@@ -340,7 +400,7 @@ describe("Ingredient", () => {
 
         request(app)
             .post('/ingredient')
-            .send({ingredient: {name : 'New Ingredient test'}})
+            .send({ingredient: {name : ingredientNames[4]}})
             .expect(400)
             .expect((res) => {
                 expect(res.body.message).toInclude('Missing category id')
@@ -355,7 +415,7 @@ describe("Ingredient", () => {
             let cat = cats[0];
 
             let ingredient = new Ingredient({
-                name: 'ingre_spec_testname2',
+                name: ingredientNames[5],
                 _creator : cat._id
             });
 
@@ -366,7 +426,7 @@ describe("Ingredient", () => {
                     //update date
                     let ingredientCommand = {
                         ingredient : {
-                            name : 'ttestnameUpdate',
+                            name : ingredientNames[6],
                             _id : doc._id,
                             _creator: doc._creator
                         }
@@ -387,8 +447,8 @@ describe("Ingredient", () => {
                                     done();
 
                                 }).catch((reason) => {
-                                done(reason)
-                            });
+                                    done(reason)
+                                });
 
                         });
                 });
@@ -405,7 +465,6 @@ describe("Ingredient", () => {
             .then((docs) => {
 
                 let ingredient = docs[0];
-
 
                 Recipe.find({})
                     .then((recs) => {
@@ -456,9 +515,55 @@ describe("Ingredient", () => {
             }).catch(done);
     });
 
+    it("should update attribute of a ingredient/recipe", done =>{
+
+        IngredientRecipeAttributes.findOne({name: attributeName})
+            .then(attribute => {
+
+                request(app)
+                    .put('/ingredient/attribute')
+                    .send({_id: attribute._id, itemSelectedForShopping: false})
+                    .expect(204)
+                    .end( (err, res) => {
+
+                        if(err) return done(err);
+
+                        IngredientRecipeAttributes.findOne({name: attributeName})
+                            .then(attrUpdate => {
+
+                                expect(attrUpdate.itemSelectedForShopping).toBe(false);
+                                done();
+                            });
+                    });
+            });
+    });
+
+    it("should update attribute list of a ingredient/recipe", done =>{
+
+        IngredientRecipeAttributes.findOne({name: attributeName})
+            .then(attribute => {
+
+                request(app)
+                    .put('/ingredient/attribute/many')
+                    .send([{_id: attribute._id, itemSelectedForShopping: false}])
+                    .expect(204)
+                    .end( (err, res) => {
+
+                        if(err) return done(err);
+
+                        IngredientRecipeAttributes.findOne({name: attributeName})
+                            .then(attrUpdate => {
+
+                                expect(attrUpdate.itemSelectedForShopping).toBe(false);
+                                done();
+                            });
+                    });
+            });
+    });
+
     it("should delete a ingredient", (done) => {
 
-        var name = ingredientTestName + '0';
+        var name = ingredientNames[0];
 
         Ingredient.findOne({name})
             .then((doc) => {
@@ -468,11 +573,11 @@ describe("Ingredient", () => {
                     .expect(204)
                     .expect((res) => {
 
-                        Ingredient.find({})
-                            .then((docs) => {
-                                expect(docs.length).toBe(1);
+                        Ingredient.findOne({name})
+                            .then((doc) => {
+                                expect(doc).toBe(null);
                             }).catch((reason) => {
-                                done(reason)
+                                done(reason);
                             });
                     })
                     .end(done)
@@ -501,6 +606,5 @@ describe("Ingredient", () => {
             })
 
         return promise.promise;
-
     }
 });

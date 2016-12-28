@@ -13,9 +13,20 @@ const {Recipe} = require('../../../models/recipe.model');
 const {Category} = require('../../../models/category.model');
 const {Ingredient} = require('../../../models/ingredient.model');
 
+const categoryNames = [
+    'from_rec_cattest0',
+    'from_rec_cattest1'
+];
+
+const ingredientNames = [
+    "from_rec_ingredient0",
+    "from_rec_ingredient1"
+];
+
 const recipes = [
     {
-        name: 'from_rec_spec_testname1'
+        name: 'from_rec_spec_testname1',
+        isInMenuWeek: true
     },
     {
         name: 'from_rec_spec_testname2'
@@ -23,15 +34,50 @@ const recipes = [
 
 beforeEach((done) => {
 
-    Recipe.remove({name : 'from_rec_spec_testname1'})
-        .then(() => {
-            Recipe.remove( {name : 'from_rec_spec_testname2'})
-                .then( () => {
-                    Recipe.insertMany(recipes).then(() => {
-                        done();
-                    });
+    let count_names = categoryNames.length;
+
+    categoryNames.forEach(name => {
+
+        Category.remove({name})
+            .then(() => {
+
+                if(--count_names === 0) {
+                    //cannot use remove {} all because could affect the recipe in the other tests cases
+                    removedIngredient();
+                }
+            });
+    });
+
+    function removedIngredient() {
+
+        let count = ingredientNames.length;
+
+        ingredientNames.forEach(name => {
+            Ingredient.remove({name})
+                .then(() => {
+
+                    if(--count === 0) {
+                        kickOff();
+                    }
+
                 });
         });
+    }
+
+    function kickOff() {
+
+        //FIXME like above
+        Recipe.remove({name : 'from_rec_spec_testname1'})
+            .then(() => {
+                Recipe.remove( {name : 'from_rec_spec_testname2'})
+                    .then( () => {
+                        Recipe.insertMany(recipes).then(() => {
+                            done();
+                        });
+                    });
+            });
+    }
+
 });
 
 describe('Recipe', () => {
@@ -45,6 +91,18 @@ describe('Recipe', () => {
                 expect(Array.isArray(res.body)).toBe(true)
            })
            .end(done)
+
+    });
+
+    it('should get recipe Week List', (done) => {
+
+        request(app)
+            .get('/recipe/week')
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.length).toBe(1);
+            })
+            .end(done)
 
     });
 
@@ -125,12 +183,12 @@ describe('Recipe', () => {
     it("should update a recipe", (done) => {
 
         //update date
-        let nameTestUpdate = 'testnameUpdate';
+        let nameTestUpdate = 'from_recipe_testnameUpdate';
 
         Recipe.remove({name: nameTestUpdate})
             .then(() => {
 
-                Recipe.findOne({name: recipes[0].name})
+                Recipe.findOne({name: recipes[1].name})
                     .then(rec => {
 
                         request(app)
@@ -141,15 +199,15 @@ describe('Recipe', () => {
 
                                 if (err) return done(err);
 
-                                Recipe.findOne({_id: rec._id})
-                                    .then((doc) => {
+                                Recipe.findOne({name: recipes[1].name})
+                                    .then(doc => {
 
-                                        expect(doc.name).toBe(nameTestUpdate);
+                                        expect(doc).toBe(null);
                                         done();
 
                                     }).catch((reason) => {
-                                    done(reason)
-                                });
+                                        done(reason)
+                                    });
                             });
                     });
         });
@@ -190,14 +248,14 @@ describe('Recipe', () => {
 
 
         let category = new Category({
-            name: 'cat_recipe_test'
+            name: categoryNames[0]
         });
 
         category.save()
             .then((doc) => {
 
                 let ingredient = new Ingredient({
-                    name: 'ingredient_test_rec',
+                    name: ingredientNames[0],
                     _creator: doc._id
                 });
 
@@ -207,8 +265,8 @@ describe('Recipe', () => {
                         findRecipeAndRequestApi();
 
                     }).catch((reason) => {
-                        console.error(" error saving ingredient", reason)
-                    });
+                    console.error(" error saving ingredient", reason)
+                });
             });
 
         function findRecipeAndRequestApi() {
@@ -251,14 +309,14 @@ describe('Recipe', () => {
             let categories = [];
 
             let category = new Category({
-                name: 'testCatRec'
+                name: categoryNames[1]
             });
 
             category.save()
                 .then(() => {
 
                     let ingredient = new Ingredient({
-                        name: 'testIngrRec'
+                        name: ingredientNames[1]
                     });
 
                     ingredient.save()
@@ -292,7 +350,7 @@ describe('Recipe', () => {
 
                             if (err) return done(err);
 
-                            requestRecipePopulated(recFindOne._id)
+                            requestRecipePopulated(recFindOne._id);
                         });
                 });
 

@@ -32,25 +32,25 @@ router.get("/category/check/:recipeId", (request, response, next) => {
                         model: 'Ingredient'
                     };
 
+                    //TODO refactor here, callback hell
                     Recipe.populate(recipe, options)
                         .then(deepRecipe => {
-
-                           // console.log("****** REC DEEP ", categories)
 
                             categories.forEach(cat => {
 
                                 cat.ingredients.forEach(ingToBeSend => {
 
                                     deepRecipe.categories.forEach(recCategory => {
-                                        let recipe = recCategory.ingredients.find(recipeIngredient => recipeIngredient._id = ingToBeSend._id)
 
-                                        if(recipe){
-                                            ingToBeSend.tempRecipeLinkIndicator = true;
+                                        if(recCategory.name === cat.name) {
+                                            let ingredientFound = recCategory
+                                                .ingredients
+                                                .find(ingredientInRecipe => {
+                                                    return ingredientInRecipe._id.toString() === ingToBeSend._id.toString()
+                                                });
 
 
-
-                                           // console.log("ing to send", ing);
-                                           // console.log("******************", ing.tempRecipeLinkIndicator);
+                                            ingToBeSend.tempRecipeLinkIndicator = ingredientFound ? true : false;
                                         }
 
                                     });
@@ -59,11 +59,7 @@ router.get("/category/check/:recipeId", (request, response, next) => {
 
                             handleResponse(response, categories, 200);
                         });
-
                    // console.log("****** CAT UPDATED", categories)
-
-
-
                 }).catch(reason => wmHandleError(response, reason));
         }
 });
@@ -73,6 +69,28 @@ router.get("/category", (request, response, next) => {
     Category.find()
         .populate('ingredients')
         .then((categories) => {
+
+            handleResponse(response, categories, 200);
+
+        }, (reason) => {
+            wmHandleError(response, reason);
+        });
+});
+
+
+router.get("/category/week/shopping", (request, response, next) => {
+
+    Category.find()
+        .populate({
+            path: 'ingredients',
+            populate : {
+                path: 'attributes',
+                match: {itemSelectedForShopping: true}
+            }
+        })
+        .then((categories) => {
+
+          //  console.log("***** im here", categories)
 
             handleResponse(response, categories, 200);
 

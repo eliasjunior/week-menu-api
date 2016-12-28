@@ -17,6 +17,17 @@ router.get("/recipe", (req, res, next) => {
     });
 });
 
+router.get("/recipe/week", (req, res, next) => {
+
+    Recipe.find({isInMenuWeek: true}).then(doc => {
+
+        handleResponse(res, doc, 200);
+    }, (reason) => {
+        wmHandleError(res, reason);
+    });
+});
+
+
 router.get("/recipe/:id", (req, res, next) => {
 
     log.logExceptOnTest("Recipe name", req.params.id);
@@ -57,8 +68,9 @@ router.put('/recipe', (request, res, next) => {
     let recipeCommand = request.body;
 
     Recipe.findOneAndUpdate({_id: recipeCommand._id}, recipeCommand)
-        .then((doc) => {
-            handleResponse(res, doc, 204);
+        .then((docUpdated) => {
+
+            handleResponse(res, docUpdated, 204);
         }, (reason) => {
             wmHandleError(res, reason);
         });
@@ -88,7 +100,7 @@ router.get("/recipe/category/:id", (req, response, next) => {
 
             Recipe.populate(populated,options)
                 .then(deepPopulated => {
-//                  console.log("deep docSaved", deepPopulated.categories);
+                 // console.log("deep docSaved", deepPopulated.categories);
 
                     handleResponse(response, deepPopulated, 200);
 

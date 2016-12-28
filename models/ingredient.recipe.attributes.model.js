@@ -17,9 +17,16 @@
             },
             name: String,
             quantity: Number,
-            itemSelectedForShopping: Boolean,
+            itemSelectedForShopping: {
+                type: Boolean,
+                default: true
+            },
             ingredientId : {type : Schema.Types.ObjectId, ref: 'Ingredient', required: true},
             recipeId : {type : Schema.Types.ObjectId, ref: 'Recipe', required: true},
+            checkedInCartShopping: {
+                type: Boolean,
+                default: true
+            }
 
         }, options));
 

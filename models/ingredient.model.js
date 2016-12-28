@@ -34,14 +34,11 @@
         //for the recipe list, ingredient that needs to buy, some ingredient is in the recipe but does not
         //need to buy
         checkedInCartShopping: Boolean,
+        tempRecipeLinkIndicator: Boolean,
+        attributes: [{ref: 'IngredientRecipeAttributes', type: Schema.Types.ObjectId }]
     }, options);
 
-    ingredientSchema.virtual('tempRecipeLinkIndicator').get(() => {
-       return
-    });
-
     var Ingredient = Base.discriminator('Ingredient',ingredientSchema);
-
 
     module.exports = {Ingredient};
 

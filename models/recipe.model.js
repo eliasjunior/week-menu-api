@@ -26,7 +26,8 @@
                 },
                 mainMealValue : String,
                 countIngredient: Number,
-                description: String
+                description: String,
+                attributes: [{ref: 'IngredientRecipeAttributes', type: Schema.Types.ObjectId }]
             }, options));
 
     module.exports = {Recipe};
