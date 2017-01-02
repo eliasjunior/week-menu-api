@@ -5,10 +5,10 @@
 (function () {
     'use strict'
 
-    var mongoose = require('mongoose');
-    var Schema = mongoose.Schema;
-    var {Base} = require('./base.model');
-    var options = {discriminatorKey: 'kind'};
+    const mongoose = require('mongoose');
+    const Schema = mongoose.Schema;
+    const {Base} = require('./base.model');
+    const options = {discriminatorKey: 'kind'};
 
     const ingredientSchema = new mongoose.Schema({
         name: {
@@ -38,7 +38,7 @@
         attributes: [{ref: 'IngredientRecipeAttributes', type: Schema.Types.ObjectId }]
     }, options);
 
-    var Ingredient = Base.discriminator('Ingredient',ingredientSchema);
+    const Ingredient = Base.discriminator('Ingredient',ingredientSchema);
 
     module.exports = {Ingredient};
 

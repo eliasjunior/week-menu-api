@@ -12,6 +12,7 @@ const app = require('../../../server').app;
 const {Recipe} = require('../../../models/recipe.model');
 const {Category} = require('../../../models/category.model');
 const {Ingredient} = require('../../../models/ingredient.model');
+const {IngredientRecipeAttributes} = require('../../../models/ingredient.recipe.attributes.model');
 
 const categoryNames = [
     'from_rec_cattest0',
@@ -32,55 +33,41 @@ const recipes = [
         name: 'from_rec_spec_testname2'
     }];
 
-beforeEach((done) => {
-
-    let count_names = categoryNames.length;
-
-    categoryNames.forEach(name => {
-
-        Category.remove({name})
-            .then(() => {
-
-                if(--count_names === 0) {
-                    //cannot use remove {} all because could affect the recipe in the other tests cases
-                    removedIngredient();
-                }
-            });
-    });
-
-    function removedIngredient() {
-
-        let count = ingredientNames.length;
-
-        ingredientNames.forEach(name => {
-            Ingredient.remove({name})
-                .then(() => {
-
-                    if(--count === 0) {
-                        kickOff();
-                    }
-
-                });
-        });
-    }
-
-    function kickOff() {
-
-        //FIXME like above
-        Recipe.remove({name : 'from_rec_spec_testname1'})
-            .then(() => {
-                Recipe.remove( {name : 'from_rec_spec_testname2'})
-                    .then( () => {
-                        Recipe.insertMany(recipes).then(() => {
-                            done();
-                        });
-                    });
-            });
-    }
-
-});
 
 describe('Recipe', () => {
+
+    beforeEach((done) => {
+
+        function removeAll() {
+
+            IngredientRecipeAttributes.remove({}).then(() => {
+                Ingredient.remove({}).then(() => {
+                    Category.remove({}).then(() => {
+                        Recipe.remove({}).then(() => {
+                            kickOff();
+                        });
+                    });
+                })
+
+            });
+        }
+
+        function kickOff() {
+
+            //FIXME like above
+            Recipe.remove({name : 'from_rec_spec_testname1'})
+                .then(() => {
+                    Recipe.remove( {name : 'from_rec_spec_testname2'})
+                        .then( () => {
+                            Recipe.insertMany(recipes).then(() => {
+                                done();
+                            });
+                        });
+                });
+        }
+
+        removeAll();
+    });
 
     it('should get recipe list', (done) => {
 

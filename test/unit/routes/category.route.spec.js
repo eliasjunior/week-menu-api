@@ -47,189 +47,164 @@ let recipeName = 'recipe_test_cat_spec';
 
 const Q = require('q');
 
-beforeEach(done => {
-
-    let count_names = categoryNames.length;
-
-    categoryNames.forEach(name => {
-
-        Category.remove({name})
-            .then(() => {
-
-                if(--count_names === 0) {
-                    insertManyCat();
-                }
-            });
-    });
-
-    function insertManyCat() {
-
-        //FIXME remove all will mess
-        IngredientRecipeAttributes.remove({})
-            .then(removedIngredient)
-            .then(insertManyCategory)
-            .then(saveRecipe)
-            .then(saveIngredients)
-            .then(saveAttributesRecipes);
-
-        function removedIngredient() {
-
-            let count = ingredientNames.length;
-            ingredientNames.forEach(name => {
-                Ingredient.remove({name})
-                    .then(() => {
-
-                        if(--count === 0) {
-                            let deferred = Q.defer();
-                            deferred.resolve({});
-                            return deferred.promise;
-                        }
-
-                    });
-            });
-        }
-
-        function insertManyCategory() {
-
-            let result = {categories : null, recipeId: null};
-
-            let deferred = Q.defer();
-
-            Category
-                .insertMany(categories)
-                .then(docs => {
-
-                    result.categories = docs;
-
-                    deferred.resolve(result);
-
-                }).catch((reason) => deferred.reject(reason));
-
-            return deferred.promise;
-
-        }
-
-        function saveRecipe(paramResult) {
-
-            let deferred = Q.defer();
-
-            Recipe.remove({name : recipeName})
-                .then(() => {
-
-                    let recipe = new Recipe({
-                        name: recipeName,
-                    });
-
-                    //Save first
-                    recipe.save()
-                        .then(docRec => {
-
-                            let result = {
-                                recipeId: docRec._id,
-                                categories: paramResult.categories
-                            };
-
-                            Recipe
-                                .findOne({_id: docRec._id})
-                                .then(recipe => {
-
-                                    //Add category
-                                    paramResult.categories.forEach((cat) => {
-                                        recipe.categories.push(cat);
-                                    });
-
-                                    //save again
-                                    recipe.save()
-                                        .then(() => {
-                                            deferred.resolve(result);
-                                        });
-
-                                }, (reason) => deferred.reject(reason));
-
-                    }).catch(reason => deferred.reject(reason))
-                });
-
-            return deferred.promise;
-        }
-
-        function saveIngredients(paramResult) {
-            let result = {
-                ingredientIds : [],
-                recipeId: paramResult.recipeId
-            };
-
-            let deferred = Q.defer();
-
-            let count = paramResult.categories.length;
-
-            paramResult.categories.forEach(function(category, index){
-
-                //FIXME messy name
-                let ingredient = new Ingredient({
-                    name : ingredientNames[index],
-                    _creator :  category._id
-                });
-
-                ingredient.save()
-                    .then(ing => {
-
-                        result.ingredientIds.push(ing._id);
-
-                        Category.findOne({_id: category._id})
-                            .then(category => {
-
-                                category.ingredients.push(ing);
-
-                                category.save().then(() => {
-
-                                    if(--count === 0) {
-
-                                        deferred.resolve(result);
-                                    }
-
-                                });
-
-                            });
-                    });
-            });
-
-            return deferred.promise;
-        }
-
-        function saveAttributesRecipes(paramResult) {
-
-            IngredientRecipeAttributes.remove({})
-                .then(() => {
-
-                    let ingRecipe = new IngredientRecipeAttributes({
-                        labelQuantity: 'kg',
-                        name: 'attribute_test',
-                        ingredientId: paramResult.ingredientIds[0],
-                        recipeId: paramResult.recipeId,
-                        itemSelectedForShopping: true
-                    });
-
-                    ingRecipe.save()
-                        .then(() => {
-
-                            Ingredient.findOne({_id: paramResult.ingredientIds[0]})
-                                .then(ingredient => {
-
-                                    ingredient.attributes.push(ingRecipe);
-
-                                    ingredient.save().then(() => {
-                                        done();
-                                    })
-                                });
-                        });
-                })
-                .catch(reason => done());
-        }
-
-    }
-});
 
 describe("Category", () => {
+
+    beforeEach(done => {
+
+        function removeAll() {
+
+            IngredientRecipeAttributes.remove({}).then(() => {
+                Ingredient.remove({}).then(() => {
+                    Category.remove({}).then(() => {
+                        Recipe.remove({}).then(() => {
+                            kickOff();
+                        });
+                    });
+                })
+
+            });
+        }
+
+        function kickOff() {
+
+            insertManyCategory()
+                .then(saveRecipe)
+                .then(saveIngredients)
+                .then(saveAttributesRecipes);
+
+            function insertManyCategory() {
+
+                let result = {categories : null, recipeId: null};
+
+                let deferred = Q.defer();
+
+                Category
+                    .insertMany(categories)
+                    .then(docs => {
+
+                        result.categories = docs;
+
+                        deferred.resolve(result);
+
+                    }).catch((reason) => deferred.reject(reason));
+
+                return deferred.promise;
+
+            }
+
+            function saveRecipe(paramResult) {
+
+                let deferred = Q.defer();
+
+                let recipe = new Recipe({
+                    name: recipeName,
+                });
+
+                //Save first
+                recipe.save()
+                    .then(docRec => {
+
+                        let result = {
+                            recipeId: docRec._id,
+                            categories: paramResult.categories
+                        };
+
+                        Recipe
+                            .findOne({_id: docRec._id})
+                            .then(recipe => {
+
+                                //Add category
+                                paramResult.categories.forEach((cat) => {
+                                    recipe.categories.push(cat);
+                                });
+
+                                //save again
+                                recipe.save()
+                                    .then(() => {
+                                        deferred.resolve(result);
+                                    });
+
+                            }, (reason) => deferred.reject(reason));
+
+                    }).catch(reason => deferred.reject(reason));
+
+                return deferred.promise;
+            }
+
+            function saveIngredients(paramResult) {
+                let result = {
+                    ingredientIds : [],
+                    recipeId: paramResult.recipeId
+                };
+
+                let deferred = Q.defer();
+
+                let count = paramResult.categories.length;
+
+                paramResult.categories.forEach(function(category, index){
+
+                    let ingredient = new Ingredient({
+                        name : ingredientNames[index],
+                        _creator :  category._id
+                    });
+
+                    ingredient.save()
+                        .then(ing => {
+
+                            result.ingredientIds.push(ing._id);
+
+                            Category.findOne({_id: category._id})
+                                .then(category => {
+
+                                    category.ingredients.push(ing);
+
+                                    category.save().then(() => {
+
+                                        if(--count === 0) {
+
+                                            deferred.resolve(result);
+                                        }
+
+                                    });
+
+                                });
+                        });
+                });
+
+                return deferred.promise;
+            }
+
+            function saveAttributesRecipes(paramResult) {
+
+                let ingRecipe = new IngredientRecipeAttributes({
+                    labelQuantity: 'kg',
+                    name: 'attribute_test',
+                    ingredientId: paramResult.ingredientIds[0],
+                    recipeId: paramResult.recipeId,
+                    itemSelectedForShopping: true
+                });
+
+                ingRecipe.save()
+                    .then(() => {
+
+                        Ingredient.findOne({_id: paramResult.ingredientIds[0]})
+                            .then(ingredient => {
+
+                                ingredient.attributes.push(ingRecipe);
+
+                                ingredient.save().then(() => {
+                                    done();
+                                }).catch(reason => done(reason));
+                            }).catch(reason => done(reason));
+                    }).catch(reason => done(reason));
+            }
+
+        }
+
+        removeAll();
+
+    });
 
     it("should get category list", (done) => {
 
@@ -268,60 +243,7 @@ describe("Category", () => {
 
                     if (err) return done("didn't find recipe");
                 });
-        })
-
-
-
-        // let ingredName = ingredientNames[3];
-        //
-        // let category = new Category({
-        //     name: categoryNames[3]
-        // });
-        //
-        // category.save().then(cated => {
-        //
-        //     let ingredient = new Ingredient({
-        //         name: ingredName,
-        //         _creator: cated._id
-        //     });
-        //
-        //     //I need to save ingredient and add it to category, because it will be retrieved
-        //     ingredient.save().then(ing => {
-        //
-        //         cated.ingredients.push(ing);
-        //
-        //         cated.save().then(() => {
-        //             Recipe.findOne({name: recipeName}).then(recipe => {
-        //
-        //                 recipe.categories.push(cated);
-        //
-        //                 recipe.save().then(aleluia => {
-        //
-        //                     request(app)
-        //                         .get('/category/check/'+aleluia._id)
-        //                         .expect(200)
-        //                         .end((err, res) => {
-        //
-        //                             if (err) return done(err);
-        //
-        //                             let categories = res.body;
-        //
-        //                             categories.forEach(category => {
-        //                                 if(category.ingredients.length > 0) {
-        //                                     expect(category.ingredients[0].tempRecipeLinkIndicator).toBe(true);
-        //                                     done();
-        //                                 }
-        //                             });
-        //
-        //                             if (err) return done("didn't find recipe");
-        //                         });
-        //                 });
-        //             });
-        //
-        //         })
-        //
-        //     });
-        // });
+        });
     });
 
     it('should load category by passing an Id', (done) => {
@@ -511,26 +433,19 @@ describe("Category", () => {
 
                 let contLoopEnd = categories.length;
 
-                let hasIngredient = false;
-
                 categories.forEach( (cat) => {
-
-                    console.log("*****",contLoopEnd)
 
                     cat.ingredients.forEach(ingredient => {
 
-                        console.log(">>>><<<<<<<<<",ingredient.attributes)
-
-                       // expect(ingredient.itemSelectedForShopping).toBe(true);
-                        hasIngredient = true;
+                        ingredient.attributes.forEach(attr => {
+                           expect(attr.itemSelectedForShopping).toBe(true);
+                        });
+                        //console.log("ingredient", ingredient.attributes)
                     });
 
-
                     if(--contLoopEnd === 0) {
-                        expect(hasIngredient).toBe(true);
                         done();
                     }
-
                 });
 
             });

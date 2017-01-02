@@ -40,150 +40,130 @@ const attributeName = 'global_attribute_name';
 
 const Q = require('q');
 
-beforeEach((done) => {
-
-    let count_names = categoryNames.length;
-
-    categoryNames.forEach(name => {
-
-        Category.remove({name})
-            .then(() => {
-
-                if(--count_names === 0) {
-                    insertManyCat();
-                }
-            });
-    });
 
 
-    function insertManyCat() {
+describe("Ingredient", () => {
 
-        IngredientRecipeAttributes.remove({})
-            .then(removedIngredient)
-            .then(insertManyCategory)
-            .then(saveRecipe)
-            .then(saveIngredients)
-            .then(saveAttributesRecipes)
+    beforeEach((done) => {
 
-        function removedIngredient() {
+        function removeAll() {
 
-            let count = ingredientNames.length;
-
-            ingredientNames.forEach(name => {
-                Ingredient.remove({name})
-                    .then(() => {
-
-                        if(--count === 0) {
-                            let deferred = Q.defer();
-                            deferred.resolve({});
-                            return deferred.promise;
-                        }
-
+            IngredientRecipeAttributes.remove({}).then(() => {
+                Ingredient.remove({}).then(() => {
+                    Category.remove({}).then(() => {
+                        Recipe.remove({}).then(() => {
+                            kickOff();
+                        })
                     });
+                })
+
             });
         }
 
-        function insertManyCategory() {
+        function kickOff() {
 
-            let result = {docs : null, recipeId: null};
+            insertManyCategory()
+                .then(saveRecipe)
+                .then(saveIngredients)
+                .then(saveAttributesRecipes)
 
-            let deferred = Q.defer();
 
-            Category
-                .insertMany(categories)
-                .then(docs => {
+            function insertManyCategory() {
 
-                    result.docs = docs;
+                let result = {docs : null, recipeId: null};
+
+                let deferred = Q.defer();
+
+                Category
+                    .insertMany(categories)
+                    .then(docs => {
+
+                        result.docs = docs;
+
+                        deferred.resolve(result);
+
+                    }).catch((reason) => deferred.reject(reason));
+
+                return deferred.promise;
+
+            }
+
+            function saveIngredients(paramResult) {
+                let result = {
+                    ingredientIds : [],
+                    recipeId: paramResult.recipeId
+                }
+
+                let deferred = Q.defer();
+
+                let count = 0;
+
+                paramResult.docs.forEach(function(item, index){
+
+                    let ingredient = new Ingredient({
+                        name : ingredientNames[index],
+                        _creator :  item._id
+                    });
+
+                    ingredient.save()
+                        .then((ing) => {
+
+                            result.ingredientIds.push(ing._id)
+
+                            if(++count === 2) {
+                                deferred.resolve(result);
+                            }
+                        })
+                })
+
+                return deferred.promise;
+            }
+
+            function saveRecipe(paramResult) {
+
+                let deferred = Q.defer();
+
+                let recipe = new Recipe({
+                    name: recipeName
+                });
+
+                recipe.save().then(docRec => {
+
+                    let result = {
+                        recipeId: paramResult.recipeId,
+                        docs: paramResult.docs
+                    }
+                    result.recipeId = docRec._id;
 
                     deferred.resolve(result);
 
-                }).catch((reason) => deferred.reject(reason));
+                }).catch(reason => deferred.reject(reason))
 
-            return deferred.promise;
-
-        }
-
-        function saveIngredients(paramResult) {
-            let result = {
-                ingredientIds : [],
-                recipeId: paramResult.recipeId
+                return deferred.promise;
             }
 
-            let deferred = Q.defer();
+            function saveAttributesRecipes(paramResult) {
+                IngredientRecipeAttributes.remove({})
+                    .then(() => {
 
-            let count = 0;
-
-            paramResult.docs.forEach(function(item, index){
-
-                let ingredient = new Ingredient({
-                    name : ingredientNames[index],
-                    _creator :  item._id
-                });
-
-                ingredient.save()
-                    .then((ing) => {
-
-                    result.ingredientIds.push(ing._id)
-
-                    if(++count === 2) {
-                        deferred.resolve(result);
-                    }
-                })
-            })
-
-           return deferred.promise;
-        }
-
-        function saveAttributesRecipes(paramResult) {
-            IngredientRecipeAttributes.remove({})
-                .then(() => {
-
-                    let ingRecipe = new IngredientRecipeAttributes({
-                        labelQuantity: 'kg',
-                        name: attributeName,
-                        ingredientId: paramResult.ingredientIds[0],
-                        recipeId: paramResult.recipeId,
-                        itemSelectedForShopping: true
-
-                    })
-
-                    ingRecipe.save().then(() => { done() });
-                })
-                .catch(reason => done())
-        }
-
-        function saveRecipe(paramResult) {
-
-            let deferred = Q.defer();
-
-            Recipe.remove({name: recipeName})
-                .then(docR => {
-
-                    let recipe = new Recipe({
-                        name: recipeName
-                    });
-
-                    recipe.save().then(docRec => {
-
-                        let result = {
+                        let ingRecipe = new IngredientRecipeAttributes({
+                            labelQuantity: 'kg',
+                            name: attributeName,
+                            ingredientId: paramResult.ingredientIds[0],
                             recipeId: paramResult.recipeId,
-                            docs: paramResult.docs
-                        }
-                        result.recipeId = docRec._id;
+                            itemSelectedForShopping: true
 
-                        deferred.resolve(result);
+                        })
 
-                    }).catch(reason => deferred.reject(reason))
-
-
-                })
-
-            return deferred.promise;
+                        ingRecipe.save().then(() => { done() });
+                    })
+                    .catch(reason => done())
+            }
         }
-    }
-});
 
-describe("Ingredient", () => {
+        removeAll();
+
+    });
 
     it("should get ingredient list", (done) => {
 
@@ -333,16 +313,17 @@ describe("Ingredient", () => {
 
                 function findAttributesAndTestIt(result) {
 
-                    IngredientRecipeAttributes.findOne({ingredientId: result.ingredientId, recipeId: result.recipeId})
-                        .then(attr => {
+                    IngredientRecipeAttributes
+                        .findOne({ingredientId: result.ingredientId, recipeId: result.recipeId})
+                            .then(attr => {
 
-                            expect(attr.recipeId.toString()).toBe(result.recipeId.toString());
+                                expect(attr.recipeId.toString()).toBe(result.recipeId.toString());
 
-                            done();
+                                done();
 
-                        }).catch((reason) => {
-                            done(reason);
-                        });
+                            }).catch((reason) => {
+                                done(reason);
+                            });
                 }
 
             });

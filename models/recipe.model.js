@@ -25,7 +25,6 @@
                     default: false
                 },
                 mainMealValue : String,
-                countIngredient: Number,
                 description: String,
                 attributes: [{ref: 'IngredientRecipeAttributes', type: Schema.Types.ObjectId }]
             }, options));
