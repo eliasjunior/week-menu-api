@@ -40,8 +40,6 @@ const attributeName = 'global_attribute_name';
 
 const Q = require('q');
 
-
-
 describe("Ingredient", () => {
 
     beforeEach((done) => {
@@ -210,22 +208,6 @@ describe("Ingredient", () => {
                     }).end(done)
 
             });
-    });
-
-    it("should load all ingredients/attributes of a specific recipe", done => {
-
-        Recipe.findOne({name: recipeName}).then(rec => {
-
-            request(app)
-                .get('/ingredient/recipe/'+rec._id)
-                .expect(200)
-                .expect(res => {
-                    let attributeList = res.body;
-
-                    expect(attributeList[0].itemSelectedForShopping).toBe(true);
-                })
-                .end(done)
-        });
     });
 
     it("should save a ingredient", (done) => {

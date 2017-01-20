@@ -5,13 +5,10 @@
 (function () {
     'use strict'
 
-    var mongoose = require('mongoose');
-    var Schema = mongoose.Schema;
-    var {Base} = require('./base.model');
-    var options = {discriminatorKey: 'kind'};
+    const mongoose = require('mongoose');
+    const Schema = mongoose.Schema;
 
-    var Category = Base.discriminator('Category',
-        new mongoose.Schema({
+    const categorySchema = new mongoose.Schema({
             name: {
                 type: String,
                 minlength: 1,
@@ -19,10 +16,14 @@
                 unique: true,
                 required: true,
             },
+            updateDate: Date,
+            insertDate: Date,
             ingredients : [{type : Schema.Types.ObjectId, ref: 'Ingredient'}],
             recipes: [{type : Schema.Types.ObjectId, ref: 'Recipe'}]
 
-        }, options));
+        });
+
+    const Category = mongoose.model('Category', categorySchema);
 
     module.exports = {Category};
 })();

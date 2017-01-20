@@ -7,8 +7,6 @@
 
     const mongoose = require('mongoose');
     const Schema = mongoose.Schema;
-    const {Base} = require('./base.model');
-    const options = {discriminatorKey: 'kind'};
 
     const ingredientSchema = new mongoose.Schema({
         name: {
@@ -18,6 +16,8 @@
             required: true,
             unique: true
         },
+        updateDate: Date,
+        insertDate: Date,
         _creator : {
             type : Schema.Types.ObjectId,
             ref: 'Category'
@@ -34,11 +34,24 @@
         //for the recipe list, ingredient that needs to buy, some ingredient is in the recipe but does not
         //need to buy
         checkedInCartShopping: Boolean,
-        tempRecipeLinkIndicator: Boolean,
+        tempRecipeLinkIndicator: {
+            type: Boolean,
+            default: true
+        },
         attributes: [{ref: 'IngredientRecipeAttributes', type: Schema.Types.ObjectId }]
-    }, options);
+    });
 
-    const Ingredient = Base.discriminator('Ingredient',ingredientSchema);
+    let transientAttribute;
+
+    //does not serve para nada
+    ingredientSchema.virtual('currentRecipeAttribute')
+        .get(() => {
+            return transientAttribute;
+        }).set(value => {
+            transientAttribute = value;
+        });
+
+    const Ingredient = mongoose.model('Ingredient',ingredientSchema);
 
     module.exports = {Ingredient};
 

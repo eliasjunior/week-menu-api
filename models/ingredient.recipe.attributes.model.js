@@ -7,11 +7,8 @@
 
     const mongoose = require('mongoose');
     const Schema = mongoose.Schema;
-    const {Base} = require('./base.model');
-    const options = {discriminatorKey: 'kind'};
 
-    const IngredientRecipeAttributes = Base.discriminator('IngredientRecipeAttributes',
-        new mongoose.Schema({
+    const attributesSchema = new mongoose.Schema({
             labelQuantity: {
                 type: String
             },
@@ -26,9 +23,15 @@
             checkedInCartShopping: {
                 type: Boolean,
                 default: true
+            },
+            recipeFlagSelected : {
+                type: Boolean,
+                default: true
             }
 
-        }, options));
+        });
+
+    const IngredientRecipeAttributes = mongoose.model('IngredientRecipeAttributes', attributesSchema);
 
     module.exports = {IngredientRecipeAttributes};
 })();

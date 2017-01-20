@@ -8,59 +8,89 @@ const log = require('../utils/log.message');
 
 const {Category} = require('../models/category.model');
 const {Recipe} = require('../models/recipe.model');
+const {IngredientRecipeAttributes} = require('../models/ingredient.recipe.attributes.model');
+
+const Q = require('q');
 
 
 router.get("/category/check/:recipeId", (request, response, next) => {
 
+    //TODO need to write a test case for it
+    //read /recipe/category comments
     Category.find()
         .populate('ingredients')
-        .then(categories => {
-            linkRecipeToIngredients(categories);
+        .then(allCategories => {
+            linkRecipeToIngredients(allCategories);
 
         }, (reason) => {
             wmHandleError(response, reason);
         });
 
-        function linkRecipeToIngredients(categories){
+        function linkRecipeToIngredients(allCategories){
+
+            let countCat = allCategories.length;
+
+            if(countCat === 0) {
+                handleResponse(response, allCategories, 200);
+            }
 
             Recipe.findOne({_id: request.params.recipeId})
                 .populate('categories')
                 .then(recipe => {
 
-                    let options = {
-                        path: 'categories.ingredients',
-                        model: 'Ingredient'
-                    };
+                    let recipeId = recipe._id;
 
-                    //TODO refactor here, callback hell
-                    Recipe.populate(recipe, options)
-                        .then(deepRecipe => {
+                    allCategories.forEach(catFromAll => {
 
-                            categories.forEach(cat => {
+                        let countIngredient = catFromAll.ingredients.length;
 
-                                cat.ingredients.forEach(ingToBeSend => {
+                        //console.log("Counts in loop ", countCat, countIngredient)
 
-                                    deepRecipe.categories.forEach(recCategory => {
+                        if(countIngredient === 0) {
 
-                                        if(recCategory.name === cat.name) {
-                                            let ingredientFound = recCategory
-                                                .ingredients
-                                                .find(ingredientInRecipe => {
-                                                    return ingredientInRecipe._id.toString() === ingToBeSend._id.toString()
-                                                });
+                            if(--countCat === 0) {
+                                handleResponse(response, allCategories, 200);
+                            }
 
+                        } else {
 
-                                            ingToBeSend.tempRecipeLinkIndicator = ingredientFound ? true : false;
+                            catFromAll.ingredients.forEach(ingToBeSend => {
+                                //console.log("CAt Name", catFromAll.name, ingToBeSend.name)
+                                //reset always because virtual does not work!
+                                ingToBeSend.tempRecipeLinkIndicator = false;
+
+                                let ingredientId = ingToBeSend._id;
+
+                                IngredientRecipeAttributes.findOne({recipeId, ingredientId}).then(attr => {
+
+                                    if(attr) {
+                                        ingToBeSend.tempRecipeLinkIndicator = attr.recipeFlagSelected;
+
+                                        //console.log("attr", attr.name)
+
+                                    } else {
+                                        ingToBeSend.tempRecipeLinkIndicator = false
+                                    }
+
+                                    //console.log("Ingredient " + ingToBeSend.name, ingToBeSend.tempRecipeLinkIndicator)
+
+                                    if(--countIngredient <= 0) {
+
+                                        //console.log("Going!", countIngredient, countCat)
+                                        if(--countCat === 0) {
+                                            handleResponse(response, allCategories, 200);
                                         }
+                                    }
 
-                                    });
                                 });
                             });
+                        }
 
-                            handleResponse(response, categories, 200);
-                        });
-                   // console.log("****** CAT UPDATED", categories)
+                    });
+
+                    // console.log("****** CAT UPDATED", categories)
                 }).catch(reason => wmHandleError(response, reason));
+
         }
 });
 
@@ -81,18 +111,36 @@ router.get("/category", (request, response, next) => {
 router.get("/category/week/shopping", (request, response, next) => {
 
     Category.find()
-        .populate({
-            path: 'ingredients',
-            populate : {
-                path: 'attributes',
-                match: {itemSelectedForShopping: true}
-            }
-        })
-        .then((categories) => {
+        .populate('ingredients')
+        .then((docs) => {
 
-          //  console.log("***** im here", categories)
+            const options = {
+                path: 'ingredients.attributes',
+                model: 'IngredientRecipeAttributes',
+                match: {itemSelectedForShopping: true, recipeFlagSelected: true}
+            };
 
-            handleResponse(response, categories, 200);
+            Category.populate(docs, options).then(deep => {
+
+                let categories = deep.filter(category => {
+
+                    let ingredients = category.ingredients.filter(ingredient => ingredient.attributes.length > 0);
+
+                    category.ingredients = ingredients;
+
+                    return category.ingredients.length > 0;
+
+                });
+
+                //filter by recipe in the week menu
+                // categories = categories.filter(cat => {
+                //     return cat.recipes.length > 0;
+                // });
+
+
+                handleResponse(response, categories, 200);
+            }).catch(reason => wmHandleError(response, reason));
+
 
         }, (reason) => {
             wmHandleError(response, reason);
@@ -114,24 +162,83 @@ router.get("/category/:id", (req, res, next) => {
 
 router.post('/category', (req, res, next) => {
 
-    var category = new Category({
-        name : req.body.name
+    const request = req.body;
+
+    const category = new Category({
+        name : request.name
     });
 
-    category.save()
-        .then((doc) => {
-            handleResponse(res, doc, 201);
-        }, (reason) => {
-            wmHandleError(res, reason);
-        });
+    if(request.recipeId) {
+
+        let tempRecipe = category.recipes.find(rec => rec._id.toString() === request.recipeId);
+
+        if(!tempRecipe) {
+
+            Recipe.findOne({_id: request.recipeId})
+                .then(recipe => {
+
+                    category.recipes.push(recipe);
+
+                    saveCategory();
+
+                });
+        } else {
+            saveCategory();
+        }
+
+    } else {
+        saveCategory();
+    }
+
+    function saveCategory() {
+        category.save()
+            .then((doc) => {
+                handleResponse(res, doc, 201);
+            }, (reason) => {
+                wmHandleError(res, reason);
+            });
+    }
+
 });
 
 router.put('/category', (req, res, next) => {
     // ** Concept status ** use 204 No Content to indicate to the client that
     //... it doesn't need to change its current "document view".
-    Category.findOneAndUpdate({_id: req.body._id}, req.body)
-        .then((doc) => {
-            handleResponse(res, doc, 204);
+
+    let request = req.body;
+
+    Category.findOne({_id: req.body._id})
+        .populate('recipes')
+        .then(category => {
+
+            category.name = req.body.name;
+
+            if(request.recipeId) {
+
+                let tempRecipe = category.recipes.find(rec => rec._id.toString() === request.recipeId);
+
+                if(!tempRecipe) {
+
+                    //TODO repeated code /post
+                    Recipe.findOne({_id: request.recipeId})
+                        .then(recipe => {
+
+                            category.recipes.push(recipe);
+
+                            category.save()
+                                .then(() => handleResponse(res, category, 204))
+
+                        });
+                } else {
+                    category.save()
+                        .then(() => handleResponse(res, category, 204))
+                }
+
+            } else {
+                category.save()
+                    .then(() => handleResponse(res, category, 204))
+            }
+
         }, (reason) => {
             wmHandleError(res, reason);
         });

@@ -24,6 +24,8 @@ const ingredientNames = [
     "from_rec_ingredient1"
 ];
 
+const Q = require('q');
+
 const recipes = [
     {
         name: 'from_rec_spec_testname1',
@@ -54,16 +56,116 @@ describe('Recipe', () => {
 
         function kickOff() {
 
-            //FIXME like above
-            Recipe.remove({name : 'from_rec_spec_testname1'})
-                .then(() => {
-                    Recipe.remove( {name : 'from_rec_spec_testname2'})
-                        .then( () => {
-                            Recipe.insertMany(recipes).then(() => {
-                                done();
-                            });
-                        });
+            Recipe.insertMany(recipes)
+                .then(saveCategory)
+                .then(saveIngredient)
+                .then(saveIngredientAttributeAndAddToArray)
+                .then(findRecipeAndLinkToCategory);
+
+            function saveCategory(recs) {
+
+                const Q = require('q');
+
+                let defer = Q.defer();
+
+                let chainResult = {
+                    recipes : recs,
+                    category: null
+                };
+
+                //insert category
+                let category = new Category({
+                    name: categoryNames[0]
                 });
+
+                category.save()
+                    .then(category => {
+                        chainResult.category = category;
+
+                        defer.resolve(chainResult);
+                    })
+                    .catch(reason => defer.reject(reason));
+
+
+                return defer.promise;
+            }
+
+            function saveIngredient(chainResult) {
+
+                let defer = Q.defer();
+
+                let ingredient = new Ingredient({
+                    name: ingredientNames[0],
+                    _creator: chainResult.category._id
+                });
+
+                ingredient.save()
+                    .then(ingredient => {
+
+                        chainResult.ingredient = ingredient;
+
+                        defer.resolve(chainResult);
+
+                    }).catch(reason => defer.reject(reason));
+
+                return defer.promise;
+            }
+
+            function saveIngredientAttributeAndAddToArray(chainResult) {
+
+                let defer = Q.defer();
+
+                let ingredient = chainResult.ingredient;
+                let category = chainResult.category;
+
+                let attribute = new IngredientRecipeAttributes({
+                    name: chainResult.recipes[0].name,
+                    ingredientId: ingredient._id,
+                    recipeId: chainResult.recipes[0]._id,
+                    itemSelectedForShopping: true
+                });
+
+                attribute.save().then(() => {
+
+                    ingredient.attributes.push(attribute);
+
+                    ingredient.save()
+                        .then(() => {
+
+                            category.ingredients.push(ingredient);
+
+                            category.save().then(() => {
+
+                                defer.resolve(chainResult);
+
+                            }).catch(reason => defer.reject(reason));
+
+                        }).catch(reason => defer.reject(reason));
+
+                });
+
+                return defer.promise;
+            }
+
+            function findRecipeAndLinkToCategory(chainResult) {
+
+                let name = chainResult.recipes[0].name;
+
+                Recipe.findOne({name})
+                    .then(docFindOne => {
+
+                        docFindOne.categories.push(chainResult.category);
+
+                        docFindOne.save()
+                            .then(() => {
+                                done();
+                            }).catch((reason) => {
+                                done(reason);
+                            });
+
+                    });
+
+            }
         }
 
         removeAll();
@@ -158,47 +260,174 @@ describe('Recipe', () => {
 
     it("should fail to save/post a duplicate recipe", (done) => {
 
-            request(app)
-                .post('/recipe')
-                .send({name : recipes[0].name})
-                .expect(400)
-                .expect((res) => {
-                    expect(res.body.message).toInclude('duplicate key error')
-                }).end(done)
+        request(app)
+            .post('/recipe')
+            .send({name : recipes[0].name})
+            .expect(400)
+            .expect((res) => {
+                expect(res.body.message).toInclude('duplicate key error')
+            }).end(done)
     });
 
     it("should update a recipe", (done) => {
 
-        //update date
         let nameTestUpdate = 'from_recipe_testnameUpdate';
 
-        Recipe.remove({name: nameTestUpdate})
-            .then(() => {
+        Recipe.findOne({name: recipes[1].name})
+            .then(rec => {
 
-                Recipe.findOne({name: recipes[1].name})
-                    .then(rec => {
+                request(app)
+                    .put('/recipe')
+                    .send({name: nameTestUpdate, _id: rec._id})
+                    .expect(204)
+                    .end((err, res) => {
 
-                        request(app)
-                            .put('/recipe')
-                            .send({name: nameTestUpdate, _id: rec._id})
-                            .expect(204)
-                            .end((err, res) => {
+                        if (err) return done(err);
 
-                                if (err) return done(err);
+                        Recipe.findOne({name: recipes[1].name})
+                            .then(doc => {
 
-                                Recipe.findOne({name: recipes[1].name})
-                                    .then(doc => {
+                                expect(doc).toBe(null);
+                                done();
 
-                                        expect(doc).toBe(null);
-                                        done();
-
-                                    }).catch((reason) => {
-                                        done(reason)
-                                    });
+                            }).catch((reason) => {
+                                done(reason)
                             });
                     });
+            });
+
+    });
+
+
+    it("should get all recipe's ingredients along it categories", (done) => {
+
+        let name = recipes[0].name;
+
+        Recipe.findOne({name})
+            .then((docFindOne) => {
+
+                request(app)
+                    .get('/recipe/category/'+ docFindOne._id)
+                    .expect(200)
+                    .end((err, res) => {
+
+                        if (err) return done(err);
+
+                        let recipe = res.body;
+
+                        expect(recipe.categories.length).toBe(1);
+
+                        recipe.categories.forEach(category => {
+
+                            expect(category.ingredients.length > 0).toBe(true);
+
+                        });
+
+                        done();
+                    });
+            });
+    });
+
+    it("should link recipe to categories/ingredients and return it populated", (done) => {
+
+        let name = recipes[0].name;
+
+        Recipe.findOne({name}).then(recipe => {
+
+            //same recipe name
+            IngredientRecipeAttributes.findOne({name}).then(attr => {
+
+                attr.recipeFlagSelected = true;
+
+                attr.save().then(() => {
+
+                    Ingredient.findOne({_id: attr.ingredientId}).then(ingredient => {
+                        //mark checkbox
+                        ingredient.tempRecipeLinkIndicator = true;
+                        sendRecipeAndParameters(ingredient);
+                    });
+                });
+            });
         });
 
+
+        function sendRecipeAndParameters(ingredient) {
+
+            let name = recipes[0].name;
+
+            Recipe.findOne({name}).then( (recFindOne) => {
+
+                request(app)
+                    .put('/recipe/ingredient')
+                    .send({_id: recFindOne._id, ingredient : ingredient})
+                    .expect(204)
+                    .end((err, res) => {
+
+                        if (err) return done(err);
+
+                        requestRecipePopulated(recFindOne._id, ingredient);
+                    });
+            });
+        }
+
+        function requestRecipePopulated(id, ingredientSent) {
+            let getInto = false;
+            request(app)
+                .get('/recipe/category/'+ id)
+                .expect(200)
+                .end((err, res) => {
+
+                    if (err) return done(err);
+
+                    let recipe = res.body;
+
+                    recipe.categories.forEach(cat => {
+                        //send the tempRecipeLinkIndicator/false = remove
+                        cat.ingredients.forEach(ing => {
+
+                            if(ing.name === ingredientSent.name) {
+                                expect(ingredientSent.tempRecipeLinkIndicator).toBe(true);
+                                getInto = true;
+                            }
+
+                        });
+                    });
+
+                    //make sure the expect run in the loop
+                    expect(getInto).toBe(true);
+
+                    done();
+                });
+        }
+
+    });
+
+    it("should load all ingredients and current attributes of a recipe", done => {
+
+        Recipe.findOne({name: recipes[0].name}).then(rec => {
+
+            request(app)
+                .get('/recipe/category/currentAttribute/'+rec._id)
+                .expect(200)
+                .expect(res => {
+                    let recipe = res.body;
+
+                   // console.log("deep docSaved", categories);
+
+                    recipe.categories.forEach(category => {
+
+                        category.ingredients.forEach(ingredient => {
+
+                            expect(ingredient.attributes.length > 0).toBe(true);
+                            expect(ingredient.attributes[0].itemSelectedForShopping).toBe(true);
+
+                        });
+
+                    });
+
+                })
+                .end(done)
+        });
     });
 
     it("should delete a recipe", (done) => {
@@ -212,154 +441,62 @@ describe('Recipe', () => {
                     .send({_id : doc._id})
                     .expect(204)
                     .expect((res) => {
-
-                        Recipe.find({})
-                            .then((docs) => {
-
-                                Recipe.findOne({name})
-                                    .then(result => {
-                                        expect(result).toBe(null);
-                                    });
-
-                            }).catch((reason) => {
-                                done(reason)
+                        Recipe.findOne({name})
+                            .then(result => {
+                                expect(result).toBe(null);
                             });
                     })
                     .end(done)
-
             });
-
     });
 
-    it("should get all recipe's ingredients along it categories", (done) => {
+    function createCategory(name) {
 
+        const deferred = Q.defer();
 
-        let category = new Category({
-            name: categoryNames[0]
-        });
+        let category = new Category({name});
 
         category.save()
-            .then((doc) => {
+            .then(cat => {
+                deferred.resolve(cat);
+            }).catch(reason => deferred.reject(reason));
 
-                let ingredient = new Ingredient({
-                    name: ingredientNames[0],
-                    _creator: doc._id
-                });
+        return deferred.promise;
+    }
 
-                ingredient.save()
-                    .then(() => {
+    function createIngredient(name, cat) {
 
-                        findRecipeAndRequestApi();
+        const deferred = Q.defer();
 
-                    }).catch((reason) => {
-                    console.error(" error saving ingredient", reason)
-                });
-            });
+        let ingredient = new Ingredient({
+            name,
+            _creator: cat._id
+        });
 
-        function findRecipeAndRequestApi() {
-            let name = recipes[0].name;
+        ingredient.save()
+            .then(() => {
 
-            Recipe.findOne({name})
-                .then((docFindOne) => {
+                deferred.resolve({ingredient, cat});
 
-                    docFindOne.categories.push(category)
-                    docFindOne.save()
-                        .then(() => {
+            }).catch(reason => deferred.reject(reason));
 
-                            request(app)
-                                .get('/recipe/category/'+ docFindOne._id)
-                                .expect(200)
-                                .end((err, res) => {
+        return deferred.promise;
+    }
 
-                                    if (err) return done(err);
+    function linkIngredientToCategory(result) {
+        const deferred = Q.defer();
 
-                                    let recipe = res.body;
+        let cat = result.cat;
 
-                                    expect(recipe.categories.length).toBe(1)
+        //Link Ingredient to category
+        cat.ingredients.push(result.ingredient);
 
-                                    done()
+        cat.save()
+            .then(() => {
+                deferred.resolve(cat);
+            }).catch(reason => deferred.reject(reason));
 
-                                });
-                        }).catch((reason) => {
-                            console.error("error saving recipe", reason)
-                        });
+        return deferred.promise;
+    }
 
-                });
-        }
-    });
-
-
-    it("should link recipe to categories/ingredients and return it populated", (done) => {
-
-        function createCategoryToSend() {
-
-            let categories = [];
-
-            let category = new Category({
-                name: categoryNames[1]
-            });
-
-            category.save()
-                .then(() => {
-
-                    let ingredient = new Ingredient({
-                        name: ingredientNames[1]
-                    });
-
-                    ingredient.save()
-                        .then(() => {
-
-                            category.ingredients.push(ingredient);
-                            category.save()
-                                .then(() => {
-                                    categories.push(category);
-
-                                    sendRecipeAndParameters(categories);
-                                });
-
-                        });
-
-                });
-        }
-
-        function sendRecipeAndParameters(categories) {
-
-            let name = recipes[0].name;
-
-            Recipe.findOne({name})
-                .then( (recFindOne) => {
-
-                    request(app)
-                        .put('/recipe/category')
-                        .send({_id: recFindOne._id, categories : categories})
-                        .expect(204)
-                        .end((err, res) => {
-
-                            if (err) return done(err);
-
-                            requestRecipePopulated(recFindOne._id);
-                        });
-                });
-
-        }
-
-        function requestRecipePopulated(id) {
-            request(app)
-                .get('/recipe/category/'+ id)
-                .expect(200)
-                .end((err, res) => {
-
-                    if (err) return done(err);
-
-                    let recipe = res.body;
-
-                    expect(recipe.categories.length).toBe(1)
-                    expect(recipe.categories[0].ingredients.length).toBe(1);
-
-                    done()
-                });
-        }
-
-        createCategoryToSend();
-    });
 });

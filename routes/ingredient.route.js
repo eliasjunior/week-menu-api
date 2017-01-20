@@ -53,6 +53,7 @@ router.get("/ingredient/recipe/:ingredientId/:recipeId", (request, res, next) =>
 
 });
 
+//FIXME deprecated ??
 router.get("/ingredient/recipe/:recipeId", (request, res, next) => {
 
     log.logExceptOnTest("params", request.params.recipeId);
@@ -65,16 +66,18 @@ router.get("/ingredient/recipe/:recipeId", (request, res, next) => {
         }, (reason) => {
             wmHandleError(res, reason);
         });
-
 });
-
 
 router.post('/ingredient', (request, res, next) => {
 
+
+    //TODO need a stronger test case on it, its breaking too much
+    let recipeId = request.body.ingredientRecipeAttributes.recipeId;
+
     validate(request)
         .then(saveIngredient)
-        .then(saveAttributes)
-        .then(findCategoryAndAddToIt)
+        .then(saveAttribute)
+        .then(findCategoryAndAddToIt.bind(null, recipeId))
         .then(ingredient => {
             handleResponse(res, ingredient, 201);
         }).catch((reason) => {
@@ -96,7 +99,7 @@ router.post('/ingredient', (request, res, next) => {
             checkedInCartShopping: ingredientRequest.checkedInCartShopping
         });
 
-        ingredient.save().then((doc) => {
+        ingredient.save().then(doc => {
 
             let result = {
                 ingredient: doc,
@@ -111,51 +114,54 @@ router.post('/ingredient', (request, res, next) => {
         return deferred.promise;
     }
 
-    function saveAttributes(result) {
+    function saveAttribute(request) {
 
         let deferred = Q.defer();
 
-        let ingredientId = result.ingredient._id;
-        let attributes = result.ingredientCommand.ingredientRecipeAttributes;
+        let ingredientId = request.ingredient._id;
+        let attribute = request.ingredientCommand.ingredientRecipeAttributes;
 
-        if(attributes) {
+        if(attribute) {
 
-            let ingredientRecipeAttributes = getAttributes(attributes, ingredientId);
+            Recipe.findOne({_id: attribute.recipeId})
+                .then((recipe) => {
 
-            //TODO refactor hell
-            ingredientRecipeAttributes.save()
-                .then((doc) => {
+                    let ingredientRecipeAttributes = getAttribute(attribute, ingredientId, recipe.name);
 
-                    Ingredient.findOne({_id: ingredientId})
-                        .then(ingredient => {
+                    //TODO *** quite old refactor hell
+                    ingredientRecipeAttributes.save()
+                        .then((doc) => {
 
-                            ingredient.attributes.push(doc);
+                            Ingredient.findOne({_id: ingredientId})
+                                .then(ingredient => {
 
-                            ingredient.save().then( () => {
+                                    ingredient.attributes.push(doc);
 
-                                Recipe.findOne({_id: ingredientRecipeAttributes.recipeId})
-                                    .then((recipe) => {
+                                    ingredient.save()
+                                        .then( () => {
 
-                                        recipe.attributes.push(doc);
+                                            recipe.attributes.push(doc);
 
-                                        recipe.save()
-                                            .then(() => {
-                                                deferred.resolve(result.ingredient);
-                                            });
-                                    });
-                            });
-                        });
+                                            recipe.save()
+                                                .then(() => {
 
-                }).catch(reason => deferred.reject(reason));
+                                                    deferred.resolve(request.ingredient);
+
+                                                }).catch(reason => deferred.reject(reason));
+
+                                        }).catch(reason => deferred.reject(reason));
+                                });
+
+                        }).catch(reason => deferred.reject(reason));
+                });
 
         } else {
+            //TODO SHOULD create one, get the functions getAttribute from recipe.route
             deferred.resolve({});
         }
 
         return deferred.promise;
     }
-
-
 
     function validate(request) {
 
@@ -203,20 +209,22 @@ router.put('/ingredient', (request, res, next) => {
 
     let ingredientCommand = request.body;
 
+    let recipeId = ingredientCommand.ingredientRecipeAttributes.recipeId;
+
     if(ingredientCommand.ingredientRecipeAttributes) {
 
         updateIngredient(ingredientCommand)
             .then(updateAttributes)
-            .then(findCategoryAndAddToIt)
+            .then(findCategoryAndAddToIt.bind(null, recipeId))
             .then(doc => {
-                handleResponse(res, doc, 204)
+                handleResponse(res, doc, 204);
             })
             .catch(reason => wmHandleError(res, reason));
 
     } else {
          updateIngredient(ingredientCommand)
-             .then(doc => {
-                findCategoryAndAddToIt(doc.doc)
+             .then(resultChain => {
+                findCategoryAndAddToIt(recipeId, resultChain.ingredient)
                     .then(doc =>  handleResponse(res, doc, 204));
              })
              .catch(reason => wmHandleError(res, reason));
@@ -226,44 +234,42 @@ router.put('/ingredient', (request, res, next) => {
     function updateIngredient(ingredientCommand) {
 
         let deferred = Q.defer();
-        let result = {
-            ingredientCommand: ingredientCommand,
-            doc: null
+        let resultChain = {
+            ingredient: ingredientCommand.ingredient,
+            ingredientRecipeAttributes:  ingredientCommand.ingredientRecipeAttributes,
         }
 
         Ingredient.findOneAndUpdate({_id: ingredientCommand.ingredient._id}, ingredientCommand.ingredient)
             .then(() => {
 
-                result.doc = ingredientCommand.ingredient;
-
-                deferred.resolve(result);
+                deferred.resolve(resultChain);
 
             }, (reason) => deferred.reject(reason));
 
         return deferred.promise;
     }
 
-    function updateAttributes(result) {
+    function updateAttributes(resultChain) {
         let deferred = Q.defer();
 
-        let attributesRequest = result.ingredientCommand.ingredientRecipeAttributes;
+        let attributesRequest = resultChain.ingredientRecipeAttributes;
 
         if(attributesRequest._id) {
 
             IngredientRecipeAttributes.findOneAndUpdate({_id: attributesRequest._id}, attributesRequest)
                 .then(() => {
-                    deferred.resolve(result.doc);
+                    deferred.resolve(resultChain.ingredient);
                 }).catch(reason => deferred.reject(reason));
 
         } else {
 
             //Workaround to index unique bug, discriminators
             //name: 'attributes_'+new Date().getTime()
-            let ingredientRecipeAttributes = getAttributes(attributesRequest);
+            let ingredientRecipeAttributes = getAttribute(attributesRequest);
 
             ingredientRecipeAttributes.save()
                 .then(() => {
-                    deferred.resolve(result.doc);
+                    deferred.resolve(resultChain.ingredient);
                 }).catch(reason => deferred.reject(reason));
         }
 
@@ -317,8 +323,7 @@ router.delete('/ingredient', (request, res, next) => {
         });
 });
 
-
-function getAttributes(attributesRequest, ingredientId) {
+function getAttribute(attributesRequest, ingredientId, recipeName) {
 
     return  new IngredientRecipeAttributes({
         labelQuantity: attributesRequest.labelQuantity,
@@ -326,23 +331,40 @@ function getAttributes(attributesRequest, ingredientId) {
         ingredientId: ingredientId ? ingredientId : attributesRequest.ingredientId,
         recipeId: attributesRequest.recipeId,
         itemSelectedForShopping: attributesRequest.itemSelectedForShopping,
-        name: 'attributes_'+new Date().getTime()
+        name: recipeName
     });
-
 }
 
-function findCategoryAndAddToIt(ingredient) {
+function findCategoryAndAddToIt(recipeId, ingredient) {
 
     let deferred = Q.defer();
 
     Category.findOne({_id: ingredient._creator})
-        .then((cat) => {
+        .populate('ingredients')
+        .then(cat => {
 
-            cat.ingredients.push(ingredient);
+            let tempIngredient = cat.ingredients.find(ing => ingredient._id.toString() === ing._id.toString())
+
+            if(tempIngredient === undefined) {
+                cat.ingredients.push(ingredient);
+            }
 
             cat.save()
-                .then( doc => deferred.resolve(ingredient))
-                .catch(reason => deferred.reject(reason));
+                .then( doc => {
+
+                    //need to add to recipe cat array
+                    Recipe.findOne({_id: recipeId}).then(recipe => {
+
+                        addItem(recipe.categories, cat);
+
+                        recipe.save().then(() => {
+                            deferred.resolve(ingredient);
+
+                        }).catch(reason => deferred.reject(reason));
+
+                    }).catch(reason => deferred.reject(reason));
+
+                }).catch(reason => deferred.reject(reason));
 
         }).catch(reason => {
              deferred.reject(reason)
@@ -350,7 +372,6 @@ function findCategoryAndAddToIt(ingredient) {
 
     return deferred.promise;
 }
-
 
 
 function handleResponse(response, doc, status) {
@@ -383,6 +404,30 @@ function getErrorResponse() {
 
     return errorResponse;
 }
+
+//TODO move to utils
+//Should return a list?
+function addItem(list, item) {
+
+    let tempItem = list.find(itemIn => {
+
+        return getValue(itemIn) === getValue(item);
+    });
+
+    if(!tempItem) {
+        list.push(item);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function getValue(value) {
+
+    return value['_id'] !== undefined ? value._id.toString() : value.toString();
+
+}
+
 
 
 module.exports = router;
