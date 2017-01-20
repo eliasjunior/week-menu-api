@@ -15,8 +15,6 @@
     } else if(env === 'test') {
         process.env.PORT = 3001;
         process.env.MONGODB_URI = 'mongodb://localhost:27017/week_menu_test';
-    } else {
-        process.env.MONGODB_URI = 'mongolab-curly-31156/week_menu_test';
     }
 
 })();
