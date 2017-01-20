@@ -9,11 +9,13 @@ const log = require('./utils/log.message');
 
 var app = require('express')();
 
-var db  = require('./db/mongoose');
+const db  = require('./db/mongoose');
 
-var bodyParser = require('body-parser');
+const bodyParser = require('body-parser');
 
-var logger = function(request, response, next) {
+const port = process.env.PORT;
+
+const logger = function(request, response, next) {
     log.logExceptOnTest("body: ", request.body);
     log.logExceptOnTest("METHOD: ", request.method);
     log.logExceptOnTest("resource: ", request.path);
@@ -57,7 +59,6 @@ db.connection.once('open', () => {
     log.logExceptOnTest("MongoDB successful connected");
 });
 
-const port = process.env.PORT;
 
 app.listen(port, () => {
     log.logExceptOnTest("Application started. Listening on port:" + port);
