@@ -98,6 +98,7 @@ router.get("/category", (request, response, next) => {
 
     Category.find()
         .populate('ingredients')
+        .sort({'name': 1})
         .then((categories) => {
 
             handleResponse(response, categories, 200);
