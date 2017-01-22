@@ -16,9 +16,10 @@ const bodyParser = require('body-parser');
 const port = process.env.PORT;
 
 const logger = function(request, response, next) {
-    log.logExceptOnTest("body: ", request.body);
-    log.logExceptOnTest("METHOD: ", request.method);
-    log.logExceptOnTest("resource: ", request.path);
+    log.logExceptOnTest("Request body: ", request.body);
+    log.logExceptOnTest("Request METHOD: ", request.method);
+    log.logExceptOnTest("Request resource: ", request.path);
+
     next();
 }
 

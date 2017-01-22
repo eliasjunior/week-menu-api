@@ -256,6 +256,10 @@ router.delete('/category', (req, res, next) => {
 
 
 function handleResponse(response, doc, status) {
+
+    log.logExceptOnTest("Response Category Route ----");
+    log.logExceptOnTest("Response doc", doc);
+
     response
         .status(status)
         .json(doc)

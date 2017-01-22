@@ -375,6 +375,10 @@ function findCategoryAndAddToIt(recipeId, ingredient) {
 
 
 function handleResponse(response, doc, status) {
+
+    log.logExceptOnTest("Response Ingredient Route ----");
+    log.logExceptOnTest("Response doc", doc);
+
     response
         .status(status)
         .json(doc)

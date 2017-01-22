@@ -435,6 +435,10 @@ function removeItem(list, pos) {
 
 
 function handleResponse(res, doc, status) {
+
+    log.logExceptOnTest("Response Recipe Route ----");
+    log.logExceptOnTest("Response doc", doc);
+
     res
         .status(status)
         .json(doc)
