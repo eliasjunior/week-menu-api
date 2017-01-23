@@ -60,17 +60,18 @@ db.connection.once('open', () => {
     log.logExceptOnTest("MongoDB successful connected");
 });
 
-
 app.listen(port, () => {
     log.logExceptOnTest("Application started. Listening on port:" + port);
 });
 
-
 function errorHandle(err, req, res, next){
 
+   // console.log("Error Handle", err.message)
+
     log.errorExceptOnTest(err.stack);
-    var errorResponse = {
-        message : "Error happened in the back",
+
+    const errorResponse = {
+        message : err.message,
         name: "Main error",
         errors: []
     };
@@ -80,11 +81,5 @@ function errorHandle(err, req, res, next){
         .send(errorResponse)
         .end();
 }
-
-// if(!module.parent){
-//     app.listen(port, () => {
-//         console.log("Application started. Listening on port:" + port);
-//     });
-// }
 
 module.exports = { app : app};

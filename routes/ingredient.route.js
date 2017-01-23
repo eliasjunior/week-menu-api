@@ -9,7 +9,9 @@ const log = require('../utils/log.message');
 const {Ingredient} = require('../models/ingredient.model');
 const {Category} = require('../models/category.model');
 const {IngredientRecipeAttributes} = require('../models/ingredient.recipe.attributes.model');
-const {Recipe} = require('../models/recipe.model')
+const {Recipe} = require('../models/recipe.model');
+const {_} = require('lodash');
+
 
 router.get("/ingredient", (request, response, next) => {
 
@@ -70,10 +72,12 @@ router.get("/ingredient/recipe/:recipeId", (request, res, next) => {
 
 router.post('/ingredient', (request, res, next) => {
 
+    let recipeId = null;
+    if(_.has(request, 'body.ingredientRecipeAttributes.recipeId')) {
+        recipeId = request.body.ingredientRecipeAttributes.recipeId;
+    }
 
     //TODO need a stronger test case on it, its breaking too much
-    let recipeId = request.body.ingredientRecipeAttributes.recipeId;
-
     validate(request)
         .then(saveIngredient)
         .then(saveAttribute)
@@ -110,6 +114,47 @@ router.post('/ingredient', (request, res, next) => {
 
         }).catch(reason => deferred.reject(reason))
 
+
+        return deferred.promise;
+    }
+
+    function validate(request) {
+
+        let deferred = Q.defer();
+
+        let errorResponse = getErrorResponse();
+
+        if(!_.has(request, 'body')) {
+
+            errorResponse.message = "No body found";
+            errorResponse.reason = "No body"
+
+            deferred.reject(errorResponse);
+
+        } else if(!_.has(request, "body.ingredient")) {
+
+            errorResponse.message = "no ingredient found";
+            errorResponse.reason = "body wrong format";
+
+            deferred.reject(errorResponse);
+
+        } else if(!_.has(request, 'body.ingredient._creator') ) {
+
+            errorResponse.message = "Missing category id";
+            errorResponse.reason = "Id missing";
+
+            deferred.reject(errorResponse);
+
+        } else if(!_.has(request, 'body.ingredientRecipeAttributes')) {
+
+            errorResponse.message = "Missing ingredientRecipeAttributes";
+            errorResponse.reason = "ingredientRecipeAttributes missing";
+
+            deferred.reject(errorResponse);
+
+        } else {
+            deferred.resolve(request.body);
+        }
 
         return deferred.promise;
     }
@@ -163,44 +208,7 @@ router.post('/ingredient', (request, res, next) => {
         return deferred.promise;
     }
 
-    function validate(request) {
 
-        let deferred = Q.defer();
-
-        let ingredientCommand = request.body.ingredient;
-
-        if(!request.body) {
-
-            let errorResponse = getErrorResponse();
-
-            errorResponse.message = "No body found";
-            errorResponse.reason = "No body"
-
-            deferred.reject(errorResponse);
-        } else if(!request.body.hasOwnProperty("ingredient")) {
-
-            let errorResponse = getErrorResponse();
-
-            errorResponse.message = "no ingredient attribute found";
-            errorResponse.reason = "body wrong format"
-
-            deferred.reject(errorResponse);
-
-        } else  if(!ingredientCommand.hasOwnProperty("_creator")) {
-
-            let errorResponse = getErrorResponse();
-
-            errorResponse.message = "Missing category id";
-            errorResponse.reason = "Id missing"
-
-            deferred.reject(errorResponse);
-
-        } else {
-            deferred.resolve(request.body);
-        }
-
-        return deferred.promise;
-    }
 });
 
 router.put('/ingredient', (request, res, next) => {
@@ -209,7 +217,13 @@ router.put('/ingredient', (request, res, next) => {
 
     let ingredientCommand = request.body;
 
-    let recipeId = ingredientCommand.ingredientRecipeAttributes.recipeId;
+    let recipeId = null;
+
+    //console.log("REQUEST UPDATE LODASH has", _.has(ingredientCommand, 'ingredientRecipeAttributes.recipeId'))
+
+    if(_.has(ingredientCommand, 'ingredientRecipeAttributes.recipeId')) {
+        recipeId = ingredientCommand.ingredientRecipeAttributes.recipeId;
+    }
 
     if(ingredientCommand.ingredientRecipeAttributes) {
 
@@ -217,6 +231,7 @@ router.put('/ingredient', (request, res, next) => {
             .then(updateAttributes)
             .then(findCategoryAndAddToIt.bind(null, recipeId))
             .then(doc => {
+
                 handleResponse(res, doc, 204);
             })
             .catch(reason => wmHandleError(res, reason));
@@ -258,6 +273,7 @@ router.put('/ingredient', (request, res, next) => {
 
             IngredientRecipeAttributes.findOneAndUpdate({_id: attributesRequest._id}, attributesRequest)
                 .then(() => {
+
                     deferred.resolve(resultChain.ingredient);
                 }).catch(reason => deferred.reject(reason));
 
@@ -339,6 +355,11 @@ function findCategoryAndAddToIt(recipeId, ingredient) {
 
     let deferred = Q.defer();
 
+    if(!recipeId) {
+        deferred.reject({message: "recipeId not sent"});
+        return deferred.promise;
+    }
+
     Category.findOne({_id: ingredient._creator})
         .populate('ingredients')
         .then(cat => {
@@ -355,12 +376,19 @@ function findCategoryAndAddToIt(recipeId, ingredient) {
                     //need to add to recipe cat array
                     Recipe.findOne({_id: recipeId}).then(recipe => {
 
-                        addItem(recipe.categories, cat);
+                        if(recipe) {
 
-                        recipe.save().then(() => {
-                            deferred.resolve(ingredient);
+                            addItem(recipe.categories, cat);
 
-                        }).catch(reason => deferred.reject(reason));
+                            recipe.save().then(() => {
+
+                                deferred.resolve(ingredient);
+
+                            }).catch(reason => deferred.reject(reason));
+                        } else {
+
+                            deferred.reject({message: "Not recipe found to add the category"})
+                        }
 
                     }).catch(reason => deferred.reject(reason));
 
@@ -386,7 +414,7 @@ function handleResponse(response, doc, status) {
 }
 
 function wmHandleError(res, reason) {
-    log.errorExceptOnTest("handle error", reason.message);
+
     var errorResponse = {
         message : reason.message,
         name: reason.name,

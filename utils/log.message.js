@@ -5,16 +5,17 @@
 (function () {
     'use strict'
 
+    const _ = require('lodash');
+
 
     var logExceptOnTest  = function() {
 
         if(process.env.NODE_ENV !== 'test') {
 
             if(arguments.length === 2) {
-                console.log("Log "+ getLogDate(), arguments[0], arguments[1]);
+                console.log("Log "+ getLogDate(), arguments[0], filterObject(arguments[1]));
             } else {
-                let date = new Date();
-                console.log("Log " + getLogDate(), arguments[0]);
+                console.log("Log " + getLogDate(), filterObject(arguments[0]));
             }
 
         }
@@ -33,6 +34,26 @@
 
         }
 
+    }
+
+
+    function filterObject(object) {
+
+        if(_.isArray(object)) {
+
+            let result = "Total Items " + object.length +",  \n";
+
+            let names = '';
+            object.forEach(doc => {
+                names += "  * "+_.get(doc, 'name', '') + " \n"
+            });
+
+            result += names;
+
+            return result;
+        } else {
+            return object;
+        }
     }
 
 

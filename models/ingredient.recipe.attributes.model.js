@@ -24,7 +24,7 @@
                 type: Boolean,
                 default: true
             },
-            recipeFlagSelected : {
+            isRecipeLinkedToCategory : {
                 type: Boolean,
                 default: true
             }

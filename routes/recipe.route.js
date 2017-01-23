@@ -81,7 +81,7 @@ router.get("/recipe/category/:id", (req, response, next) => {
                     //I need to check if there is an attribute flag true
                     // for each ingredients and return filtered based on it.
                     IngredientRecipeAttributes
-                        .find({recipeId: deepPopulated._id}).where('recipeFlagSelected').equals(true)
+                        .find({recipeId: deepPopulated._id}).where('isRecipeLinkedToCategory').equals(true)
                         .then(attributes => {
 
                             deepPopulated.categories.forEach(category => {
@@ -94,7 +94,7 @@ router.get("/recipe/category/:id", (req, response, next) => {
                                         .find(atrr  => atrr.ingredientId.toString() === ing._id.toString())
 
 
-                                    console.log(ing.name + " FOUND=", found !== undefined)
+                                    //console.log(ing.name + " FOUND=", found !== undefined)
                                     return found !== undefined;
 
                                 });
@@ -140,13 +140,13 @@ router.get("/recipe/category/currentAttribute/:id", (req, response, next) => {
                     const options2 = {
                         path: 'categories.ingredients.attributes',
                         model: 'IngredientRecipeAttributes',
-                        match: {recipeId : req.params.id, recipeFlagSelected: true}
+                        match: {recipeId : req.params.id, isRecipeLinkedToCategory: true}
                     };
 
                     Recipe.populate(recipeDeepPopulated, options2)
                         .then(level3 => {
 
-                            console.log("Before filter", level3.categories)
+                            //console.log("Before filter", level3.categories)
 
                             level3.categories.forEach(cat => {
 
@@ -209,12 +209,33 @@ router.put('/recipe', (request, res, next) => {
             docUpdated.description = recipeCommand.description;
             docUpdated.isInMenuWeek = recipeCommand.isInMenuWeek;
 
-            //TODO not update the list yet
+            if(!docUpdated.isInMenuWeek) {
 
-            docUpdated.save()
-                .then( () => {
-                    handleResponse(res, docUpdated, 204);
-                }, (reason) => wmHandleError(res, reason));
+                //I don't need to wait here
+                //TODO SET EVERY ATTRBITE TO FALSE!!!
+                IngredientRecipeAttributes.find({itemSelectedForShopping: true, recipeId: docUpdated._id})
+                    .then(attrs => {
+                        attrs.forEach(attr => {
+                            attr.itemSelectedForShopping = false;
+                            //not getting the callback, supposing it will work, it will do for now
+                            attr.save()
+                        });
+
+                        updateRecipe();
+
+                    })
+
+            } else {
+                updateRecipe();
+            }
+
+            function updateRecipe() {
+                docUpdated.save()
+                    .then( () => {
+                        handleResponse(res, docUpdated, 204);
+                    }, (reason) => wmHandleError(res, reason));
+            }
+
 
         }, (reason) => wmHandleError(res, reason));
 });
@@ -249,7 +270,7 @@ router.put("/recipe/ingredient", (request, response, next) => {
                 .then(saveInIngredient.bind(null, ingredient._id))
                 .then(attribute => {
 
-                    console.log('Begin', attribute.name, attribute.recipeFlagSelected);
+                    //console.log('Begin', attribute.name, attribute.isRecipeLinkedToCategory);
 
                     //TODO review recipe.attributes Im not using it
                     addItem(recipe.attributes, attribute);
@@ -266,16 +287,16 @@ router.put("/recipe/ingredient", (request, response, next) => {
 
                     function carryOn(category) {
 
-                        if(attribute.recipeFlagSelected) {
+                        if(attribute.isRecipeLinkedToCategory) {
 
-                            console.log('BEFORE  add', category.ingredients.length)
+                            //console.log('BEFORE  add', category.ingredients.length)
 
-                            let added = addItem(category.ingredients, ingredient);
+                            addItem(category.ingredients, ingredient);
 
-                            console.log('AFTER added '+added , category.ingredients.length)
+                            //console.log('AFTER added '+added , category.ingredients.length)
 
                         } else {
-                            console.log(" flag was false unchecked")
+                            //console.log(" flag was false unchecked")
 
                         }
 
@@ -370,7 +391,7 @@ function getAttribute(recipe, ingredient) {
 
     let ingredientId = ingredient._id;
 
-    let recipeFlagSelected = ingredient.tempRecipeLinkIndicator;
+    let isRecipeLinkedToCategory = ingredient.tempRecipeLinkIndicator;
 
     IngredientRecipeAttributes
         .findOne({recipeId: recipe._id, ingredientId: ingredientId})
@@ -382,7 +403,7 @@ function getAttribute(recipe, ingredient) {
                     recipeId: recipe._id,
                     ingredientId: ingredientId,
                     name: recipe.name,
-                    recipeFlagSelected: recipeFlagSelected
+                    isRecipeLinkedToCategory: isRecipeLinkedToCategory
                 });
 
                 attribute.save().then(saved => {
@@ -394,7 +415,7 @@ function getAttribute(recipe, ingredient) {
 
             } else {
 
-                attr.recipeFlagSelected = recipeFlagSelected;
+                attr.isRecipeLinkedToCategory = isRecipeLinkedToCategory;
 
                 attr.save().then(() => {
                     deferred.resolve(attr);

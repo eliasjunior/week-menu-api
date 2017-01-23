@@ -337,7 +337,7 @@ describe('Recipe', () => {
             //same recipe name
             IngredientRecipeAttributes.findOne({name}).then(attr => {
 
-                attr.recipeFlagSelected = true;
+                attr.isRecipeLinkedToCategory = true;
 
                 attr.save().then(() => {
 

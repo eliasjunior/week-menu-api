@@ -64,9 +64,9 @@ router.get("/category/check/:recipeId", (request, response, next) => {
                                 IngredientRecipeAttributes.findOne({recipeId, ingredientId}).then(attr => {
 
                                     if(attr) {
-                                        ingToBeSend.tempRecipeLinkIndicator = attr.recipeFlagSelected;
+                                        ingToBeSend.tempRecipeLinkIndicator = attr.isRecipeLinkedToCategory;
 
-                                        //console.log("attr", attr.name)
+                                        //console.log("attr", attr.name, recipe.name)
 
                                     } else {
                                         ingToBeSend.tempRecipeLinkIndicator = false
@@ -118,13 +118,14 @@ router.get("/category/week/shopping", (request, response, next) => {
             const options = {
                 path: 'ingredients.attributes',
                 model: 'IngredientRecipeAttributes',
-                match: {itemSelectedForShopping: true, recipeFlagSelected: true}
+                match: {itemSelectedForShopping: true, isRecipeLinkedToCategory: true}
             };
 
             Category.populate(docs, options).then(deep => {
 
                 let categories = deep.filter(category => {
 
+                    //filter based on the query above, if there didn't match any attribute the array is 0
                     let ingredients = category.ingredients.filter(ingredient => ingredient.attributes.length > 0);
 
                     category.ingredients = ingredients;
@@ -141,8 +142,6 @@ router.get("/category/week/shopping", (request, response, next) => {
 
                 handleResponse(response, categories, 200);
             }).catch(reason => wmHandleError(response, reason));
-
-
         }, (reason) => {
             wmHandleError(response, reason);
         });

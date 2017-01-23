@@ -316,47 +316,70 @@ describe("Ingredient", () => {
         request(app)
             .post('/ingredient')
             .expect(400)
-            .expect((res) => {
+            .end((err, res) => {
+
+                if(err)
+                    return done(err);
+
                 expect(res.body).toIncludeKeys(['message', 'errors', 'name']);
 
                 Ingredient.find({})
                     .then((docs) => {
 
                         expect(docs.length).toBe(2);
+                        done();
 
                     }).catch((reason) => {
                         return reason
                     });
-            })
-            .end(done);
+            });
 
     });
 
     it("should fail to save/post a duplicate ingredient", (done) => {
 
-        let ingredietName = ingredientNames[3];
+        Ingredient.findOne({name: ingredientNames[1]})
+            .then(ingredient => {
 
-        Category.find({})
-            .then( (docs) => {
+                getAttribute(ingredient);
+            });
 
-                let ingredient = new Ingredient({
-                    name : ingredietName,
-                    _creator : docs[0]._id
-                })
+        function getAttribute(ingredient) {
 
-                ingredient.save()
-                    .then(() => {
+            IngredientRecipeAttributes.findOne({name: attributeName})
+                .then(attribute => {
+                    let result = {
+                        attribute,
+                        ingredient
+                    }
+                    sendRequest(result);
+                });
+        }
 
-                        request(app)
-                            .post('/ingredient')
-                            .send({ingredient: {name : ingredietName, _creator : docs[0]._id}})
-                            .expect(400)
-                            .expect((res) => {
-                                expect(res.body.message).toInclude('duplicate key error')
-                            }).end(done)
-                    });
 
-            } );
+        function sendRequest(result) {
+
+            let ingredient = result.ingredient;
+
+            ingredient.save()
+                .then(() => {
+
+                    let param = {
+                        ingredient,
+                        ingredientRecipeAttributes: result.attribute
+                    }
+
+                    request(app)
+                        .post('/ingredient')
+                        .send(param)
+                        .expect(400)
+                        .expect((res) => {
+                            expect(res.body.message).toInclude('duplicate key error')
+                        }).end(done)
+                });
+
+        }
+
     });
 
     it("should fail to save/post missing category ID", (done) => {
@@ -373,51 +396,39 @@ describe("Ingredient", () => {
 
     it("should UPDATE a ingredient", (done) => {
 
-        Category.find({}).then(cats => {
+       Ingredient.findOne({name: ingredientNames[1]})
+           .then(ingredient => {
+               IngredientRecipeAttributes.findOne({name: attributeName})
+               .then(attribute => {
 
-            let cat = cats[0];
+                   let updatedName = "new Name from ingredient";
+                   ingredient.name = updatedName;
 
-            let ingredient = new Ingredient({
-                name: ingredientNames[5],
-                _creator : cat._id
-            });
+                   let ingredientCommand = {
+                       ingredient,
+                       ingredientRecipeAttributes: attribute
+                   };
 
-            //save first to make sure it will update it
-            ingredient.save()
-                .then((doc) => {
+                   request(app)
+                       .put('/ingredient')
+                       .send(ingredientCommand)
+                       .expect(204)
+                       .end((err, res) => {
+                           if (err) return done(err);
 
-                    //update date
-                    let ingredientCommand = {
-                        ingredient : {
-                            name : ingredientNames[6],
-                            _id : doc._id,
-                            _creator: doc._creator
-                        }
-                    };
+                           Ingredient.findOne({_id: ingredient._id})
+                               .then((doc) => {
 
-                    request(app)
-                        .put('/ingredient')
-                        .send(ingredientCommand)
-                        .expect(204)
-                        .end((err, res) => {
+                                   expect(doc.name).toBe(updatedName);
+                                   done();
 
-                            if (err) return done(err);
-
-                            Ingredient.findOne({_id: doc._id})
-                                .then((doc) => {
-
-                                    expect(doc.name).toBe(ingredientCommand.ingredient.name);
-                                    done();
-
-                                }).catch((reason) => {
+                               }).catch((reason) => {
                                     done(reason)
                                 });
 
-                        });
-                });
-        })
-
-
+                       });
+               });
+           });
     });
 
     it("should update ingredient and save recipes attributes", (done) => {
