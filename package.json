@@ -9,6 +9,9 @@
     "test": "export NODE_ENV=test && mocha test/**/**/*.js",
     "test-watch": "nodemon --exec 'npm test'"
   },
+  "engines": {
+    "node" : "v6.9.1"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
