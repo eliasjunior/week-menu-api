@@ -3,3 +3,20 @@
 Ingredient post
  * need to add atribute to the ingredient array
  
+ 
+ 
+Logs
+- Filter Logs for better display
+- Create Utils Logs(Service)
+
+Test case, functional tests
+
+** categories test
+/category/check/:recipeId
+- user checkbox, make sure always create an attribute or find one and update the flag
+
+/category/week/shopping
+- test case for the shopping select choice, need more tests on it
+
+** recipes
+- review the resource fo it

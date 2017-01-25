@@ -10,7 +10,7 @@
     "test-watch": "nodemon --exec 'npm test'"
   },
   "engines": {
-    "node" : "6.9.1"
+    "node": "6.9.1"
   },
   "keywords": [],
   "author": "",
