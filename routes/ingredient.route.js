@@ -351,6 +351,8 @@ function getAttribute(attributesRequest, ingredientId, recipeName) {
     });
 }
 
+//Add Ingredient to category, category.ingredients.push
+//and add category to Recipe recipe.categories.push
 function findCategoryAndAddToIt(recipeId, ingredient) {
 
     let deferred = Q.defer();
@@ -370,6 +372,7 @@ function findCategoryAndAddToIt(recipeId, ingredient) {
                 cat.ingredients.push(ingredient);
             }
 
+            //TODO refactor, maybe change to category post
             cat.save()
                 .then( doc => {
 
