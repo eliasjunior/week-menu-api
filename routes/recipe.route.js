@@ -207,25 +207,13 @@ router.put('/recipe', (request, res) => {
             docUpdated.description = recipeCommand.description;
             docUpdated.isInMenuWeek = recipeCommand.isInMenuWeek;
 
-            if(!docUpdated.isInMenuWeek) {
-
-                //I don't need to wait here
-                //TODO SET EVERY ATTRBITE TO FALSE!!!
-                IngredientRecipeAttributes.find({itemSelectedForShopping: true, recipeId: docUpdated._id})
-                    .then(attrs => {
-                        attrs.forEach(attr => {
-                            attr.itemSelectedForShopping = false;
-                            //not getting the callback, supposing it will work, it will do for now
-                            attr.save()
-                        });
-
-                        updateRecipe();
-
-                    })
-
-            } else {
-                updateRecipe();
-            }
+            //TODO Need test for this case
+            //**If isInMenuWeek = true set, should set all for true otherwise to false**
+            let itemSelectedForShoppingForTrue = docUpdated.isInMenuWeek;
+            setItemSelectedForShopping(docUpdated._id, itemSelectedForShoppingForTrue)
+                .then(() => {
+                    updateRecipe();
+                });
 
             function updateRecipe() {
                 docUpdated.save()
@@ -235,7 +223,7 @@ router.put('/recipe', (request, res) => {
             }
 
 
-        }, (reason) => wmHandleError(res, reason));
+        }, (reason) => utility.wmHandleError(res, reason));
 });
 
 /**
@@ -410,6 +398,32 @@ function saveInIngredient(ingredientId, attribute) {
                 }).catch(reason => deferred.reject(reason));
 
         }).catch(reason => deferred.reject(reason));
+
+    return deferred.promise;
+}
+
+
+function setItemSelectedForShopping(recipeId, flag) {
+    let deferred = Q.defer();
+
+    let listIdsFailed = [];
+
+    IngredientRecipeAttributes.find({itemSelectedForShopping: !flag, recipeId: recipeId})
+        .then(attrs => {
+
+            attrs.forEach(attr => {
+                attr.itemSelectedForShopping = flag;
+                //not treating if failed .save(), it will do for now
+                attr.save()
+                    .catch(reason => {
+                        log.logExceptOnTest("Failed to save attribute flag", attr._id);
+                        listIdsFailed.push(attr._id);
+                    });
+            });
+
+            deferred.resolve(listIdsFailed);
+
+        }).catch(reason =>{ deferred.reject(reason) });
 
     return deferred.promise;
 }
