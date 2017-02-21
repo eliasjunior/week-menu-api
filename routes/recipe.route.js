@@ -69,7 +69,8 @@ router.get("/recipe/category/:id", (req, response) => {
 
             const options = {
                 path: 'categories.ingredients',
-                model: 'Ingredient'
+                model: 'Ingredient',
+                sort: { name: 1 }
             };
 
             /**

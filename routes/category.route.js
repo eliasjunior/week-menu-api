@@ -12,13 +12,13 @@ const {IngredientRecipeAttributes} = require('../models/ingredient.recipe.attrib
 
 const Q = require('q');
 
-
 router.get("/category/check/:recipeId", (request, response, next) => {
 
     //TODO need to write a test case for it
     //read /recipe/category comments
     Category.find()
         .populate('ingredients')
+        .sort({'name': 1})
         .then(allCategories => {
             linkRecipeToIngredients(allCategories);
 
@@ -36,6 +36,7 @@ router.get("/category/check/:recipeId", (request, response, next) => {
 
             Recipe.findOne({_id: request.params.recipeId})
                 .populate('categories')
+                .sort({'name': 1})
                 .then(recipe => {
 
                     let recipeId = recipe._id;
@@ -112,12 +113,17 @@ router.get("/category", (request, response, next) => {
 router.get("/category/week/shopping", (request, response, next) => {
 
     Category.find()
-        .populate('ingredients')
+        .sort({name: 1})
+        .populate( {
+            path : 'ingredients',
+            options: { sort: { name: 1 }}
+        })
         .then((docs) => {
 
             const options = {
                 path: 'ingredients.attributes',
                 model: 'IngredientRecipeAttributes',
+                sort: { name: 1 },
                 match: {itemSelectedForShopping: true, isRecipeLinkedToCategory: true}
             };
 

@@ -16,6 +16,7 @@ const {_} = require('lodash');
 router.get("/ingredient", (request, response, next) => {
 
     Ingredient.find()
+        .sort({'name': 1})
         .then((docs) => {
             handleResponse(response, docs, 200);
         }, (reason) => {
