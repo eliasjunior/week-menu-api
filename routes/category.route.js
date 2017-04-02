@@ -10,11 +10,9 @@ const {Category} = require('../models/category.model');
 const {Recipe} = require('../models/recipe.model');
 const {IngredientRecipeAttributes} = require('../models/ingredient.recipe.attributes.model');
 
-const Q = require('q');
+router.get("/category/check/:recipeId", (request, response) => {
 
-router.get("/category/check/:recipeId", (request, response, next) => {
-
-    //TODO need to write a test case for it
+    //TODO write test for different/strong test case because it's really hard to improve this function at the moment
     //read /recipe/category comments
     Category.find()
         .populate('ingredients')
@@ -91,7 +89,6 @@ router.get("/category/check/:recipeId", (request, response, next) => {
 
                     // console.log("****** CAT UPDATED", categories)
                 }).catch(reason => wmHandleError(response, reason));
-
         }
 });
 

@@ -63,7 +63,7 @@ describe("Ingredient", () => {
             insertManyCategory()
                 .then(saveRecipe)
                 .then(saveIngredients)
-                .then(saveAttributesRecipes)
+                .then(saveAttributesRecipes);
 
 
             function insertManyCategory() {
@@ -90,7 +90,7 @@ describe("Ingredient", () => {
                 let result = {
                     ingredientIds : [],
                     recipeId: paramResult.recipeId
-                }
+                };
 
                 let deferred = Q.defer();
 
@@ -106,13 +106,13 @@ describe("Ingredient", () => {
                     ingredient.save()
                         .then((ing) => {
 
-                            result.ingredientIds.push(ing._id)
+                            result.ingredientIds.push(ing._id);
 
                             if(++count === 2) {
                                 deferred.resolve(result);
                             }
                         })
-                })
+                });
 
                 return deferred.promise;
             }
@@ -130,12 +130,13 @@ describe("Ingredient", () => {
                     let result = {
                         recipeId: paramResult.recipeId,
                         docs: paramResult.docs
-                    }
+                    };
+
                     result.recipeId = docRec._id;
 
                     deferred.resolve(result);
 
-                }).catch(reason => deferred.reject(reason))
+                }).catch(reason => deferred.reject(reason));
 
                 return deferred.promise;
             }
@@ -151,7 +152,7 @@ describe("Ingredient", () => {
                             recipeId: paramResult.recipeId,
                             itemSelectedForShopping: true
 
-                        })
+                        });
 
                         ingRecipe.save().then(() => { done() });
                     })
@@ -160,7 +161,6 @@ describe("Ingredient", () => {
         }
 
         removeAll();
-
     });
 
     it("should get ingredient list", (done) => {
@@ -177,7 +177,7 @@ describe("Ingredient", () => {
     it('should load ingredient by passing an Id', (done) => {
 
         const ingredient = new Ingredient({
-            name : ingredientNames[3],
+            name : ingredientNames[2],
         });
 
         ingredient.save()
@@ -218,7 +218,7 @@ describe("Ingredient", () => {
                 let categoryId = docs[0]._id;
 
                 findRecipe()
-                    .then((recipeId) => {
+                    .then( recipeId => {
 
                         let ingredientCommand = {
                             ingredient : {
@@ -281,7 +281,7 @@ describe("Ingredient", () => {
                             let result = {
                                 recipeId : recipeId,
                                 ingredientId: id
-                            }
+                            };
 
                             deferred.resolve(result);
 
@@ -351,7 +351,8 @@ describe("Ingredient", () => {
                     let result = {
                         attribute,
                         ingredient
-                    }
+                    };
+
                     sendRequest(result);
                 });
         }
@@ -367,7 +368,7 @@ describe("Ingredient", () => {
                     let param = {
                         ingredient,
                         ingredientRecipeAttributes: result.attribute
-                    }
+                    };
 
                     request(app)
                         .post('/ingredient')
@@ -449,7 +450,7 @@ describe("Ingredient", () => {
                             labelQuantity: 'kg',
                             recipeId: recipeId,
                             ingredientId: ingredient._id
-                        }
+                        };
 
                         let ingCommand = {
                             ingredient: {
@@ -463,7 +464,7 @@ describe("Ingredient", () => {
                             },
 
                             ingredientRecipeAttributes: ingredientRecipeCommand
-                        }
+                        };
 
                         request(app)
                             .put('/ingredient')
@@ -537,7 +538,7 @@ describe("Ingredient", () => {
 
     it("should delete a ingredient", (done) => {
 
-        var name = ingredientNames[0];
+        let name = ingredientNames[0];
 
         Ingredient.findOne({name})
             .then((doc) => {

@@ -15,14 +15,6 @@ const {IngredientRecipeAttributes} = require('../../../models/ingredient.recipe.
 const categoryNames = [
     "from_cat_categoryTest0",
     "from_cat_categoryTest1",
-    "from_cat_categoryTest2",
-    "from_cat_categoryTest3",
-    "from_cat_categoryTest4",
-    "from_cat_categoryTest5",
-    "from_cat_categoryTest6",
-    "from_cat_categoryTest7",
-    "from_cat_categoryTest8",
-    "from_cat_categoryTest9"
 ];
 
 const ingredientNames = [
@@ -30,15 +22,9 @@ const ingredientNames = [
     "from_cat_ingredient1"
 ];
 
-const categories = [
-    {name : categoryNames[0]},
-    {name : categoryNames[1]},
-];
-
 let recipeName = 'recipe_test_cat_spec';
 
 const Q = require('q');
-
 
 describe("Category", () => {
 
@@ -70,6 +56,11 @@ describe("Category", () => {
                 let result = {categories : null, recipeId: null};
 
                 let deferred = Q.defer();
+
+                const categories = [
+                    {name : categoryNames[0]},
+                    {name : categoryNames[1]},
+                ];
 
                 Category
                     .insertMany(categories)
@@ -194,9 +185,10 @@ describe("Category", () => {
 
                                         ingredient.attributes.push(ingRecipe);
 
-                                        ingredient.save().then(() => {
-                                            done();
-                                        }).catch(reason => done(reason));
+                                        ingredient.save()
+                                            .then(() => {
+                                                done();
+                                            }).catch(reason => done(reason));
                                     }).catch(reason => done(reason));
                             }).catch(reason => done(reason));
                     });
@@ -222,53 +214,48 @@ describe("Category", () => {
 
         let testPassed = false;
 
-        IngredientRecipeAttributes.findOne({name: recipeName}).then((attr) => {
+        IngredientRecipeAttributes.findOne({name: recipeName})
+            .then((attr) => {
 
-            Recipe.findOne({name: recipeName}).then(recipe => {
+                Recipe.findOne({name: recipeName}).then(recipe => {
 
-                request(app)
-                    .get('/category/check/'+recipe._id)
-                    .expect(200)
-                    .end((err, res) => {
+                    request(app)
+                        .get('/category/check/'+recipe._id)
+                        .expect(200)
+                        .end((err, res) => {
 
-                        if (err) return done(err);
+                            if (err) return done(err);
 
-                        let categories = res.body;
+                            let categories = res.body;
 
-                        categories.forEach(category => {
+                            categories.forEach(category => {
 
-                            if(category.ingredients.length > 0) {
+                                if(category.ingredients.length > 0) {
 
-                                category.ingredients.forEach(ing => {
-                                    if(attr.ingredientId.toString() === ing._id.toString()) {
-                                        expect(ing.tempRecipeLinkIndicator).toBe(true);
-                                        testPassed = true;
-                                    }
+                                    category.ingredients.forEach(ing => {
+                                        if(attr.ingredientId.toString() === ing._id.toString()) {
+                                            expect(ing.tempRecipeLinkIndicator).toBe(true);
+                                            testPassed = true;
+                                        }
 
-                                });
-                            }
+                                    });
+                                }
+                            });
+
+                            expect(testPassed).toBe(true);
+
+                            done();
+
+                            if (err) return done("didn't find recipe");
                         });
-
-                        expect(testPassed).toBe(true);
-
-                        done();
-
-                        if (err) return done("didn't find recipe");
-                    });
+                });
             });
-        })
-
-
     });
 
     it('should load category by passing an Id', (done) => {
 
-        const category = new Category({
-            name : categoryNames[4],
-        });
-
-        category.save()
-            .then((doc) => {
+        Category.findOne({name: categoryNames[0]})
+            .then(doc => {
 
                 request(app)
                     .get('/category/' + doc._id)
@@ -277,12 +264,12 @@ describe("Category", () => {
                         expect(res.body._id).toBe(doc._id.toString())
                     }).end(done)
             });
+
     });
 
     it("should save/post a category", (done) => {
 
-        let name = categoryNames[8];
-        let id;
+        let name = 'new cat';
 
         Recipe.findOne({name: recipeName})
             .then(recipe => {
@@ -297,7 +284,7 @@ describe("Category", () => {
 
                         expect(res.body).toIncludeKey('_id');
 
-                        id = res.body._id;
+                        let id = res.body._id;
 
                         Category.findOne({_id: id})
                             .populate('recipes')
@@ -312,9 +299,7 @@ describe("Category", () => {
                                 return done(reason);
                             });
                     });
-
             });
-
     });
 
     it("should fail to save/post a category", (done) => {
@@ -340,40 +325,30 @@ describe("Category", () => {
 
     it("should fail to save/post a duplicate category", (done) => {
 
-        const category = new Category({
-            name : categoryNames[5],
-        });
-
-        category.save()
-            .then(() => {
-                request(app)
-                    .post('/category')
-                    .send({name : categoryNames[5]})
-                    .expect(400)
-                    .expect((res) => {
-                        expect(res.body.message).toInclude('duplicate key error')
-                    }).end(done)
-            });
+        request(app)
+            .post('/category')
+            .send({name : categoryNames[0]})
+            .expect(400)
+            .expect((res) => {
+                expect(res.body.message).toInclude('duplicate key error')
+            }).end(done)
     });
 
     it("should update a category", (done) => {
 
-        var category = new Category({
-            name: categoryNames[6]
-        });
+        //update date
+        let nameTestUpdate = categoryNames[0];
 
-        //save first to make sure it will update it
-        category.save()
-            .then((doc) => {
+        Category.findOne({name: nameTestUpdate})
+            .then(doc => {
 
-                //update date
-                let nameTestUpdate = categoryNames[7];
+                nameTestUpdate += 'updateName';
 
                 request(app)
                     .put('/category')
                     .send({name: nameTestUpdate, _id: doc._id})
                     .expect(204)
-                    .end((err, res) => {
+                    .end(err => {
 
                         if (err) return done(err);
 
@@ -384,8 +359,8 @@ describe("Category", () => {
                                 done();
 
                             }).catch((reason) => {
-                                done(reason)
-                            });
+                            done(reason)
+                        });
                     });
             });
     });
@@ -431,7 +406,7 @@ describe("Category", () => {
 
                 if(err) throw err
 
-                let categories  = res.body;
+                let categories = res.body;
 
                 let temp = 0;
                 categories.forEach( (cat) => {
@@ -497,9 +472,5 @@ describe("Category", () => {
             done()
         });
 
-
-
-
-
-    })
+    });
 });

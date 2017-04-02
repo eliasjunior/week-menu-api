@@ -33,36 +33,40 @@ const recipes = [
     },
     {
         name: 'from_rec_spec_testname2'
-    }];
+    }
+];
 
 
 describe('Recipe', () => {
 
-    beforeEach((done) => {
+    beforeEach(done => {
 
         function removeAll() {
 
-            IngredientRecipeAttributes.remove({}).then(() => {
-                Ingredient.remove({}).then(() => {
-                    Category.remove({}).then(() => {
-                        Recipe.remove({}).then(() => {
-                            kickOff();
+            IngredientRecipeAttributes.remove({})
+                .then(() => {
+                    Ingredient.remove({})
+                        .then(() => {
+                            Category.remove({})
+                                .then(() => {
+                                    Recipe.remove({})
+                                        .then(() => {
+                                            kickOff();
+                                        });
+                                });
                         });
-                    });
-                })
-
-            });
+                });
         }
 
         function kickOff() {
 
             Recipe.insertMany(recipes)
-                .then(saveCategory)
-                .then(saveIngredient)
-                .then(saveIngredientAttributeAndAddToArray)
+                .then(createCategory)
+                .then(createIngredient)
+                .then(createIngredientAttributeAndAddToArray)
                 .then(findRecipeAndLinkToCategory);
 
-            function saveCategory(recs) {
+            function createCategory(recs) {
 
                 const Q = require('q');
 
@@ -86,11 +90,10 @@ describe('Recipe', () => {
                     })
                     .catch(reason => defer.reject(reason));
 
-
                 return defer.promise;
             }
 
-            function saveIngredient(chainResult) {
+            function createIngredient(chainResult) {
 
                 let defer = Q.defer();
 
@@ -111,17 +114,19 @@ describe('Recipe', () => {
                 return defer.promise;
             }
 
-            function saveIngredientAttributeAndAddToArray(chainResult) {
+            function createIngredientAttributeAndAddToArray(chainResult) {
 
                 let defer = Q.defer();
 
                 let ingredient = chainResult.ingredient;
                 let category = chainResult.category;
+                let attributeName = chainResult.recipes[0].name;
+                let recipeId = chainResult.recipes[0]._id;
 
                 let attribute = new IngredientRecipeAttributes({
-                    name: chainResult.recipes[0].name,
+                    name: attributeName,
                     ingredientId: ingredient._id,
-                    recipeId: chainResult.recipes[0]._id,
+                    recipeId: recipeId,
                     itemSelectedForShopping: true
                 });
 
@@ -164,7 +169,6 @@ describe('Recipe', () => {
                             });
 
                     });
-
             }
         }
 
@@ -179,11 +183,11 @@ describe('Recipe', () => {
            .expect((res) => {
                 expect(Array.isArray(res.body)).toBe(true)
            })
-           .end(done)
+           .end(done);
 
     });
 
-    it('should get recipe Week List', (done) => {
+    it('should get recipe week list', (done) => {
 
         request(app)
             .get('/recipe/week')
@@ -197,7 +201,8 @@ describe('Recipe', () => {
 
     it('should load recipe by passing an Id', (done) => {
 
-        Recipe.findOne({name : recipes[0].name}).then(rec => {
+        Recipe.findOne({name : recipes[0].name})
+            .then(rec => {
 
                 request(app)
                     .get('/recipe/' + rec._id)
@@ -205,15 +210,12 @@ describe('Recipe', () => {
                     .expect((res) => {
                         expect(res.body._id).toBe(rec._id.toString())
                     }).end(done);
-        });
-
-
+            });
     });
 
-    it("should save/post a recipe", (done) => {
+    it("should create a recipe", (done) => {
 
         let name = 'rec_spec_post';
-        let id;
 
         Recipe.remove({name}).then( () => {
             request(app)
@@ -222,7 +224,7 @@ describe('Recipe', () => {
                 .expect(201)
                 .expect((res) => {
                     expect(res.body).toIncludeKey('_id');
-                    id = res.body._id;
+                    let id = res.body._id;
 
                     Recipe.findOne({_id: id})
                         .then((docs) => {
@@ -236,7 +238,7 @@ describe('Recipe', () => {
         });
     });
 
-    it("should fail to save/post a recipe, empty name", (done) => {
+    it("should fail to create a recipe, empty name", (done) => {
 
         request(app)
             .post('/recipe')
@@ -246,7 +248,7 @@ describe('Recipe', () => {
                 if (err) return done(err);
 
                 Recipe.find({})
-                    .then((docs) => {
+                    .then( () => {
 
                         expect(res.body).toIncludeKeys(['message', 'errors', 'name']);
                         done();
@@ -258,7 +260,7 @@ describe('Recipe', () => {
 
     });
 
-    it("should fail to save/post a duplicate recipe", (done) => {
+    it("should fail to create a duplicate recipe", (done) => {
 
         request(app)
             .post('/recipe')
@@ -332,7 +334,7 @@ describe('Recipe', () => {
 
         let name = recipes[0].name;
 
-        Recipe.findOne({name}).then(recipe => {
+        Recipe.findOne({name}).then(() => {
 
             //same recipe name
             IngredientRecipeAttributes.findOne({name}).then(attr => {
@@ -449,54 +451,5 @@ describe('Recipe', () => {
                     .end(done)
             });
     });
-
-    function createCategory(name) {
-
-        const deferred = Q.defer();
-
-        let category = new Category({name});
-
-        category.save()
-            .then(cat => {
-                deferred.resolve(cat);
-            }).catch(reason => deferred.reject(reason));
-
-        return deferred.promise;
-    }
-
-    function createIngredient(name, cat) {
-
-        const deferred = Q.defer();
-
-        let ingredient = new Ingredient({
-            name,
-            _creator: cat._id
-        });
-
-        ingredient.save()
-            .then(() => {
-
-                deferred.resolve({ingredient, cat});
-
-            }).catch(reason => deferred.reject(reason));
-
-        return deferred.promise;
-    }
-
-    function linkIngredientToCategory(result) {
-        const deferred = Q.defer();
-
-        let cat = result.cat;
-
-        //Link Ingredient to category
-        cat.ingredients.push(result.ingredient);
-
-        cat.save()
-            .then(() => {
-                deferred.resolve(cat);
-            }).catch(reason => deferred.reject(reason));
-
-        return deferred.promise;
-    }
 
 });
