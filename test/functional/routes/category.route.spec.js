@@ -7,10 +7,10 @@ const expect = require("expect");
 
 const app = require('../../../server').app;
 
-const {Category} = require('../../../models/category.model');
-const {Ingredient} = require('../../../models/ingredient.model');
-const {Recipe} = require('../../../models/recipe.model');
-const {IngredientRecipeAttributes} = require('../../../models/ingredient.recipe.attributes.model');
+const {Category} = require('../../../models/category.model.js');
+const {Ingredient} = require('../../../models/ingredient.model.js');
+const {Recipe} = require('../../../models/recipe.model.js');
+const {IngredientRecipeAttributes} = require('../../../models/ingredient.recipe.attributes.model.js');
 
 const categoryNames = [
     "from_cat_categoryTest0",
