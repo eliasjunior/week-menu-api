@@ -36,18 +36,15 @@ const sortList= function (recipes) {
     return result;
 }
 
-const handleResponse = function (res, doc, status) {
-
-    log.logExceptOnTest("Response Recipe Route ----");
-    log.logExceptOnTest("Response doc", doc);
-
+const handleResponse =  (res, doc, status) => {
+    log.logExceptOnTest("Response status code=", status);
     res
         .status(status)
         .json(doc)
         .end();
 }
 
-const wmHandleError =function (res, reason) {
+const wmHandleError = function (res, reason) {
     log.errorExceptOnTest("handle error", reason.message);
     var errorResponse = {
         message : reason.message,

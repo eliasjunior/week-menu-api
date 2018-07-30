@@ -29,6 +29,7 @@ const logger = function(request, response, next) {
 const recipeRouter = require('./routes/recipe.route');
 const ingredientRouter = require('./routes/ingredient.route');
 const categoryRouter = require('./routes/category.route');
+const productRouter = require('./routes/product.route');
 
 app.use(bodyParser.json());
 // Create application/x-www-form-urlencoded parser
@@ -68,7 +69,7 @@ app.use(function(req, res, next) {
     res.header('Access-Control-Allow-Headers', 'Content-Type');
 
     if ('OPTIONS' == req.method) {
-        res.send(200);
+        res.sendStatus(200);
     }
     else {
         next();
@@ -81,6 +82,7 @@ app.use(logger);
 app.use('/', recipeRouter);
 app.use('/', ingredientRouter);
 app.use('/', categoryRouter);
+app.use('/', productRouter);
 
 app.use(errorHandle);
 
@@ -101,9 +103,6 @@ app.listen(port, () => {
 });
 
 function errorHandle(err, req, res, next){
-
-   // console.log("Error Handle", err.message)
-
     log.errorExceptOnTest(err.stack);
 
     const errorResponse = {

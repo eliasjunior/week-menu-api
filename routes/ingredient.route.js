@@ -5,13 +5,13 @@ const router = require('express').Router();
 const Q = require('q');
 
 const log = require('../utils/log.message');
-
+const ProductService = require('../services/product.service');
 const {Ingredient} = require('../models/ingredient.model');
 const {Category} = require('../models/category.model');
 const {IngredientRecipeAttributes} = require('../models/ingredient.recipe.attributes.model');
 const {Recipe} = require('../models/recipe.model');
 const {_} = require('lodash');
-
+const {STATUS} = require('../constants/status.code');
 
 router.get("/ingredient", (request, response, next) => {
 
@@ -215,7 +215,6 @@ router.post('/ingredient', (request, res, next) => {
 router.put('/ingredient', (request, res, next) => {
     // ** Concept status ** use 204 No Content to indicate to the client that
     //... it doesn't need to change its current "document view".
-
     let ingredientCommand = request.body;
 
     let recipeId = null;
@@ -405,7 +404,7 @@ function findCategoryAndAddToIt(recipeId, ingredient) {
     return deferred.promise;
 }
 
-
+//TODO move to utils
 function handleResponse(response, doc, status) {
 
     log.logExceptOnTest("Response Ingredient Route ----");
@@ -417,6 +416,7 @@ function handleResponse(response, doc, status) {
         .end();
 }
 
+//TODO move to utils and rename it
 function wmHandleError(res, reason) {
 
     var errorResponse = {
