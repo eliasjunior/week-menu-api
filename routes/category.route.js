@@ -1,15 +1,22 @@
 /**
  * Created by eliasmj on 03/12/2016.
  */
-
 const router = require('express').Router();
 
 const log = require('../utils/log.message');
 
 const {Category} = require('../models/category.model');
+const {Ingredient} = require('../models/ingredient.model');
 const {Recipe} = require('../models/recipe.model');
 const {IngredientRecipeAttributes} = require('../models/ingredient.recipe.attributes.model');
 
+router.get("/category", (request, response, next) => {
+    Category.find()
+        .populate('ingredients')
+        .sort({'name': 1})
+        .then(categories => handleResponse(response, categories, 200))
+        .catch(reason =>  wmHandleError(response, reason));
+});
 router.get("/category/check/:recipeId", (request, response) => {
 
     //TODO write test for different/strong test case because it's really hard to improve this function at the moment
@@ -91,22 +98,6 @@ router.get("/category/check/:recipeId", (request, response) => {
                 }).catch(reason => wmHandleError(response, reason));
         }
 });
-
-router.get("/category", (request, response, next) => {
-
-    Category.find()
-        .populate('ingredients')
-        .sort({'name': 1})
-        .then((categories) => {
-
-            handleResponse(response, categories, 200);
-
-        }, (reason) => {
-            wmHandleError(response, reason);
-        });
-});
-
-
 router.get("/category/week/shopping", (request, response, next) => {
 
     Category.find()

@@ -4,11 +4,29 @@ const router = require('express').Router();
 const responseHandlerService = require('../services/response.handler.service');
 const {STATUS} = require('../constants/status.code');
 
-router.put("/product", (request, response) => {
-    ProductService.update(request.body.ingredient)
-        .then(doc =>  {
-            responseHandlerService.send(response, [], STATUS.UPDATE_CODE)
-        }).catch(reason => responseHandlerService.error(response, reason));
-});
+function updateProductRoute(request, response) {
+    ProductService.update(request.body)
+    .then(() =>  {
+        responseHandlerService.send(response, {
+            status: STATUS.UPDATE_CODE
+        });
+    })
+    .catch(reason => responseHandlerService.error(response, reason));
+}
+
+function saveProductRoute(request, response) {
+    log.logExceptOnTest('/product', request.body)
+    ProductService.save(request.body)
+        .then( doc =>  {
+            responseHandlerService.send(response,  {
+                doc,
+                status: STATUS.CREATE_CODE
+            });
+        })
+        .catch(reason => responseHandlerService.error(response, reason)); 
+}
+
+router.put("/product", updateProductRoute);
+router.post("/product", saveProductRoute);
 
 module.exports = router;

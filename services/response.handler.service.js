@@ -1,41 +1,38 @@
-const log = require('../utils/log.message');
+const HandlerService = () => {
+    const log = require('../utils/log.message');
 
-const send =  (options) => {
-    log.logExceptOnTest("Response status code=", status);
-    if(!options.response) {
-        error({message: 'response object null'});
-    }
-    const status = options.status || 200;
-    const doc = options.doc || [];
-
-    options.response
-        .status(status)
-        .json(doc)
-        .end();
-}
-
-const error = function (options) {
-    log.errorExceptOnTest("handling error", options);
-    if(!options.response) {
-        log.logExceptOnTest('response object null');
-    }
-    const reason = options.reason || {
-        message: options.message || 'Internal server error',
-        name: 'Not specified',
-        errors: []
+    const sendRequest = (statusCode, response, doc) => {
+        if(response) {
+            log.logExceptOnTest('Alert -> response object null');
+        }
+        response
+            .status(statusCode) 
+            .send(doc)
+            .end();
     };
-    const errorResponse = {
-        message : reason.message,
-        name: reason.name,
-        errors: reason.errors
+    const send =  (response, options) => {
+        log.logExceptOnTest("Response status code=", options.status);
+    
+        const status = options.status || 200;
+        const doc = options.doc || [];
+    
+        sendRequest(status, response, doc);     
     };
-    options.response
-        .status(400) 
-        .send(errorResponse)
-        .end();
-}
+    const error = (response, options) => {
+        log.errorExceptOnTest('======== response handler service =======');
+        log.errorExceptOnTest(options);
+    
+        const errorResponse = {
+            message: options.message || 'Internal server error',
+            name: options.name || 'Not specified',
+            errors: options.errors || []
+        };
+        sendRequest(400, response, errorResponse);    
+    };
 
-module.exports = {
-    send,
-    error
-}
+    return {
+        send,
+        error
+    }
+};
+module.exports = HandlerService();
