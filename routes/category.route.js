@@ -6,7 +6,6 @@ const router = require('express').Router();
 const log = require('../utils/log.message');
 
 const {Category} = require('../models/category.model');
-const {Ingredient} = require('../models/ingredient.model');
 const {Recipe} = require('../models/recipe.model');
 const {IngredientRecipeAttributes} = require('../models/ingredient.recipe.attributes.model');
 
@@ -17,6 +16,9 @@ router.get("/category", (request, response, next) => {
         .then(categories => handleResponse(response, categories, 200))
         .catch(reason =>  wmHandleError(response, reason));
 });
+
+// ###### improved above 
+
 router.get("/category/check/:recipeId", (request, response) => {
 
     //TODO write test for different/strong test case because it's really hard to improve this function at the moment
