@@ -7,7 +7,7 @@ const ProductMsgValidation = () => {
         messageValidation(errorObject) {
             log.logExceptOnTest('===== Validator Error Message =========');
             log.logExceptOnTest(errorObject ? errorObject.message : errorObject);
-            log.logExceptOnTest(errorObject.code);
+            log.logExceptOnTest('error code =>',errorObject.code);
 
             const message = VALIDATION[errorObject.code];
 

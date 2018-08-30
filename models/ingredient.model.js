@@ -22,6 +22,11 @@
             type : Schema.Types.ObjectId,
             ref: 'Category'
         },
+        categoryName: {
+            type: String,
+            minlength: 1,
+            trim: true
+        },
         expiryDate: {
             type: Date,
             default: Date.now

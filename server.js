@@ -31,6 +31,7 @@ const ingredientRouter = require('./routes/ingredient.route');
 const categoryRouter = require('./routes/category.route');
 const productRouter = require('./routes/product.route');
 const category2Router = require('./routes/category2.route');
+const recipe2Router = require('./routes/recipe2.route');
 
 app.use(bodyParser.json());
 // Create application/x-www-form-urlencoded parser
@@ -57,6 +58,7 @@ app.use('/', categoryRouter);
 
 app.use('/v2', productRouter);
 app.use('/v2', category2Router);
+app.use('/v2', recipe2Router);
 
 app.use(errorHandle);
 

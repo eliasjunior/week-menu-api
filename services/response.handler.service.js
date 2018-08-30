@@ -2,7 +2,7 @@ const HandlerService = () => {
     const log = require('../utils/log.message');
 
     const sendRequest = (statusCode, response, doc) => {
-        if(response) {
+        if(!response) {
             log.logExceptOnTest('Alert -> response object null');
         }
         response

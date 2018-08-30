@@ -9,7 +9,7 @@ const ProductService = () => {
     };
 
     return {
-        update: (productRequest) => {
+        update(productRequest) {
             log.logExceptOnTest("update -> ", productRequest.name);
             const updateObject = {
                 name: productRequest.name
@@ -19,7 +19,7 @@ const ProductService = () => {
                 .then(doc => doc)
                 .catch(reason => Promise.reject(reason));
         },
-        save: (productRequest) => {
+        save(productRequest) {
             if (!productRequest._creator) {
                 return Promise
                     .reject(ProductValidation.messageValidation({
