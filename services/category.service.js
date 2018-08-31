@@ -43,7 +43,7 @@ function CategoryService() {
         },
         get() {
             return Category.find()
-                .populate('ingredients')
+                .populate('products')
                 .sort({ 'name': 1 })
                 .then(categories => categories)
                 .catch(reason => Promise.reject(reason));
