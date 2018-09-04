@@ -26,17 +26,11 @@ function CategoryService() {
                         .reject(ProductValidation.messageValidation(reason));
                 });
         },
-        addProduct(id, ingredient) {
-            return Category.findOne({ _id: id })
+        addProduct(product, id) {
+            return Category.findOne({_id: id})
                 .then(category => {
-                    try {
-                        if (!category.ingredients.find(ing => ing._id === ingredient._id)) {
-                            category.ingredients.push(ingredient);
-                        }
-                        return category.save();
-                    } catch (error) {
-                        return Promise.reject(error);
-                    }
+                    category.products.push(product);
+                    return category.save();
                 }).catch(reason => {
                     return Promise.reject(reason);
                 });

@@ -3,11 +3,11 @@ const ProductValidation = require('../services/product.validation');
 
 const RecipeService = () => {
     return {
-        save(recipe) {
+        save(recipePayload) {
             const recipeModel = new Recipe2({
-                name: recipe.name,
+                name: recipePayload.name,
                 insertDate: new Date(),
-                products: recipe.products
+                categories: recipePayload.categories
             });
             return recipeModel.save()
                 .then(doc => doc)
@@ -19,7 +19,7 @@ const RecipeService = () => {
         },
         get() {
             return Recipe2.find()
-                .populate('products')
+                .populate('categories')
                 .sort({ 'name': 1 })
                 .then(recipes => recipes)
                 .catch(reason => Promise
