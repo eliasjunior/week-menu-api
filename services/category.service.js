@@ -1,5 +1,6 @@
 const { Category } = require('../models/category.model');
 const ProductValidation = require('../services/product.validation');
+const RecipeSubdocService = require('./recipe.subdoc.service');
 
 function CategoryService() {
     return {
@@ -17,17 +18,15 @@ function CategoryService() {
         },
         update(category) {
             return Category
-                .findOne({_id: category._id})
-                .then(doc => {
-                    doc.name = category.name;
-                    return doc.save();
-                }).catch(reason => {
+                .findOne({ _id: category._id })
+                .then(updateCategory.bind(null, category))
+                .catch(reason => {
                     return Promise
                         .reject(ProductValidation.messageValidation(reason));
                 });
         },
         addProduct(product, id) {
-            return Category.findOne({_id: id})
+            return Category.findOne({ _id: id })
                 .then(category => {
                     category.products.push(product);
                     return category.save();
@@ -43,6 +42,14 @@ function CategoryService() {
                 .catch(reason => Promise.reject(reason));
         }
     }
+}
+
+function updateCategory(category, doc) {
+    doc.name = category.name;
+    // Update all subs
+    return doc.save()
+        .then(doc => RecipeSubdocService.updateCategory(doc._id, doc.name))
+        .catch(reason => Promise.reject(reason))
 }
 
 module.exports = CategoryService();
