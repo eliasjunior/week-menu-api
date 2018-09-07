@@ -1,5 +1,5 @@
 const { Recipe2 } = require('../models/recipe2.model');
-const ProductValidation = require('../services/product.validation');
+const CustomValidation = require('../services/custom.validation');
 
 const RecipeService = () => {
     return {
@@ -12,17 +12,18 @@ const RecipeService = () => {
             return recipeModel.save()
                 .then(doc => doc)
                 .catch(reason => Promise
-                        .reject(ProductValidation.messageValidation(reason)));
+                        .reject(CustomValidation.messageValidation(reason)));
         },
         update(recipePayload) {
-            return Recipe2.findById(recipePayload._id)
+            return Recipe2
+                .findById(recipePayload._id)
                 .then(recipe => {
                     recipe.name = recipePayload.name;
                     recipe.updateDate = new Date();
                     recipe.categories = recipePayload.categories;
                     return recipe.save();
                 }).catch(reason => Promise
-                    .reject(ProductValidation.messageValidation(reason)));
+                    .reject(CustomValidation.messageValidation(reason)));
         },
         get() {
             return Recipe2.find()
@@ -30,14 +31,14 @@ const RecipeService = () => {
                 .sort({ 'name': 1 })
                 .then(recipes => recipes)
                 .catch(reason => Promise
-                    .reject(ProductValidation.messageValidation(reason)));
+                    .reject(CustomValidation.messageValidation(reason)));
         },
         getOne(id) {
             return Recipe2.findById(id)
                 .populate('categories')
                 .then(recipe => recipe)
                 .catch(reason => Promise
-                    .reject(ProductValidation.messageValidation(reason)));
+                    .reject(CustomValidation.messageValidation(reason)));
         }
     }
 }

@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 const category = require('./category.shema');
 
-const recipeSchema = new mongoose.Schema({
+const recipeSchema = new Schema({
     name: {
         type: String,
         minlength: 1,
         trim: true,
-        required: true,
-        unique: true
+        required: true
     },
     updateDate: {
         type: Date
@@ -18,9 +18,7 @@ const recipeSchema = new mongoose.Schema({
     categories: {
         type: [category],
         required: true
-    },
+    }
 });
 
-const Recipe2 = mongoose.model('Recipe2', recipeSchema);
-
-module.exports = { Recipe2 };
+module.exports = recipeSchema;

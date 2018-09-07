@@ -1,4 +1,4 @@
-const ProductMsgValidation = () => {
+const CustomValidation = () => {
     const {VALIDATION} = require('../constants/message.constant');
     const log = require('../utils/log.message');
 
@@ -20,4 +20,4 @@ const ProductMsgValidation = () => {
     }
 }
 
-module.exports = ProductMsgValidation();
+module.exports = CustomValidation();

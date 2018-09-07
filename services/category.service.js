@@ -1,5 +1,5 @@
 const { Category } = require('../models/category.model');
-const ProductValidation = require('../services/product.validation');
+const CustomValidation = require('../services/custom.validation');
 const RecipeSubdocService = require('./recipe.subdoc.service');
 
 function CategoryService() {
@@ -13,7 +13,7 @@ function CategoryService() {
                 .then(doc => doc)
                 .catch(reason => {
                     return Promise
-                        .reject(ProductValidation.messageValidation(reason));
+                        .reject(CustomValidation.messageValidation(reason));
                 });
         },
         update(category) {
@@ -22,7 +22,7 @@ function CategoryService() {
                 .then(updateCategory.bind(null, category))
                 .catch(reason => {
                     return Promise
-                        .reject(ProductValidation.messageValidation(reason));
+                        .reject(CustomValidation.messageValidation(reason));
                 });
         },
         addProduct(product, id) {

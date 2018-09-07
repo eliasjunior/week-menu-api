@@ -1,6 +1,7 @@
 module.exports = {
     VALIDATION : {
         '11000' : 'This product already exist',
-        'INTERNAL_REQUIRE_CAT': 'This product need the category parent'
+        'INTERNAL_REQUIRE_CAT': 'This product need the category parent',
+        'REQUIRE_REC_OR_CAT': 'Shopping list requires recipe/prod or product'
     }
 }

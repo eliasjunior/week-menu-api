@@ -1,4 +1,4 @@
-const ProductValidation = require('./product.validation');
+const CustomValidation = require('./custom.validation');
 const CategoryService = require('./category.service');
 const { Category } = require('../models/category.model');
 const RecipeSubdocService = require('./recipe.subdoc.service');
@@ -12,7 +12,7 @@ const ProductService = () => {
 
             if (!category) {
                 return Promise
-                    .reject(ProductValidation.messageValidation({
+                    .reject(CustomValidation.messageValidation({
                         code: 'INTERNAL_REQUIRE_CAT',
                         name: ' custom'
                     }));
@@ -27,7 +27,7 @@ const ProductService = () => {
             const category = productPayLoad.category;
             if (!category) {
                 return Promise
-                    .reject(ProductValidation.messageValidation({
+                    .reject(CustomValidation.messageValidation({
                         code: 'INTERNAL_REQUIRE_CAT',
                         name: ' custom'
                     }));
@@ -36,7 +36,7 @@ const ProductService = () => {
                 .then(doc => doc)
                 .catch(reason => {
                     return Promise
-                        .reject(ProductValidation.messageValidation(reason));
+                        .reject(CustomValidation.messageValidation(reason));
                 });
         }
     }
@@ -44,7 +44,7 @@ const ProductService = () => {
 function updateProduct(product, category) {
     if (!category) {
         return Promise
-            .reject(ProductValidation.messageValidation({
+            .reject(CustomValidation.messageValidation({
                 code: 'INTERNAL_REQUIRE_CAT',
                 name: ' custom'
             }));
