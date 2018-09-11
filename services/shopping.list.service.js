@@ -4,7 +4,7 @@ const appConstant = require('../constants/app.constant');
 
 const ShoppingListService = {
     save(shoppingListData) {
-        if(shoppingListData.recipes.length === 0 
+        if (shoppingListData.recipes.length === 0
             && shoppingListData.categories.length === 0) {
             return Promise
                 .reject(CustomValidation.messageValidation({
@@ -24,12 +24,19 @@ const ShoppingListService = {
                 .reject(CustomValidation.messageValidation(reason)));
     },
     update(shoppingListData) {
-        ShoppingList
+        if (!shoppingListData._id) {
+            return Promise
+                .reject(CustomValidation.messageValidation({
+                    code: 'REQUIRE_ID',
+                    name: ' custom'
+                }));
+        }
+
+        return ShoppingList
             .findById(shoppingListData._id)
             .then(doc => {
                 doc.categories = shoppingListData.categories;
                 doc.recipes = shoppingListData.recipes;
-                doc.name = shoppingListData.name;
                 doc.updateDate = new Date();
                 return doc.save();
             })
@@ -37,7 +44,9 @@ const ShoppingListService = {
                 .reject(CustomValidation.messageValidation(reason)))
     },
     get() {
-        return ShoppingList.find()
+        return ShoppingList
+            .find()
+            .sort({ '_id': -1 })
             .populate('categories')
             .sort({ 'name': 1 })
             .populate('recipes')
@@ -62,7 +71,7 @@ function getDayName() {
     const time = new Date();
     const dayLabel = appConstant.days[time.getDay()];
 
-    return `${dayLabel} ${time.getHours()}:${time.getMinutes()}` 
+    return `${dayLabel} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`
 }
 
 module.exports = ShoppingListService;
