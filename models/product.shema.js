@@ -8,6 +8,10 @@ const product = new Schema(
         },
         insertDate: {
             type: Date
+        },
+        completed: {
+            type: Boolean,
+            default: false
         }
     });
 

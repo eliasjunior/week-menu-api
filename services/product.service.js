@@ -32,6 +32,13 @@ const ProductService = () => {
                         name: ' custom'
                     }));
             }
+            if(!product.name) {
+                return Promise
+                .reject(CustomValidation.messageValidation({
+                    code: 'REQUIRE_NAME',
+                    name: ' custom'
+                }));
+            }
             return CategoryService.addProduct(product, category._id)
                 .then(doc => doc)
                 .catch(reason => {

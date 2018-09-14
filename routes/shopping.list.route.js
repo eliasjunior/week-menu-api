@@ -27,10 +27,17 @@ function update(request, response) {
         .then(doc => responseHandlerService.send(response, { doc, status: STATUS.UPDATE_CODE }))
         .catch(reason => responseHandlerService.error(response, reason));
 }
+function updateItem(request, response) {
+    ShoppingListService
+        .updateItem(request.body)
+        .then(doc => responseHandlerService.send(response, { doc, status: STATUS.UPDATE_CODE }))
+        .catch(reason => responseHandlerService.error(response, reason));
+}
 
 router.get('/shoppingList/:id', getOne);
 router.get('/shoppingList', get);
 router.post('/shoppingList', save);
 router.put('/shoppingList', update);
+router.put('/shoppingList/item', updateItem);
 
 module.exports = router;

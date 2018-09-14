@@ -6,11 +6,7 @@ const ShoppingListService = {
     save(shoppingListData) {
         if (shoppingListData.recipes.length === 0
             && shoppingListData.categories.length === 0) {
-            return Promise
-                .reject(CustomValidation.messageValidation({
-                    code: 'REQUIRE_REC_OR_CAT',
-                    name: ' custom'
-                }));
+            return customError('REQUIRE_REC_OR_CAT');
         }
         const shoppingListModel = new ShoppingList({
             name: getDayName(),
@@ -25,13 +21,8 @@ const ShoppingListService = {
     },
     update(shoppingListData) {
         if (!shoppingListData._id) {
-            return Promise
-                .reject(CustomValidation.messageValidation({
-                    code: 'REQUIRE_ID',
-                    name: ' custom'
-                }));
+            return customError('REQUIRE_ID');
         }
-
         return ShoppingList
             .findById(shoppingListData._id)
             .then(doc => {
@@ -42,6 +33,23 @@ const ShoppingListService = {
             })
             .catch(reason => Promise
                 .reject(CustomValidation.messageValidation(reason)))
+    },
+    updateItem(productItem) {
+        if (!productItem.shopId ||
+            (!productItem.recId &&
+            !productItem.catId)
+            ) {
+            return customError('REQUIRE_ID');
+        }
+        return ShoppingList
+            .findById(productItem.shopId)
+            .then(doc => {
+                let product = updateProductFlag(doc, productItem);
+                if (product) {
+                    return doc.save();
+                }
+                return customError('ITEM_NOT_FOUND')
+            });
     },
     get() {
         return ShoppingList
@@ -72,6 +80,39 @@ function getDayName() {
     const dayLabel = appConstant.days[time.getDay()];
 
     return `${dayLabel} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`
+}
+
+function updateProductFlag(doc, productItem) {
+    const recipe = doc.recipes.id(productItem.recId);
+    if (recipe) {
+        const category = recipe.categories.id(productItem.catId);
+        if (category) {
+            const product = category.products.id(productItem._id);
+            if (product) {
+                product.completed = productItem.completed;
+                return product;
+            }
+        }
+    }
+    else {
+        const category = doc.categories.id(productItem.catId);
+        if (category) {
+            const product = category.products.id(productItem._id);
+            if (product) {
+                product.completed = productItem.completed;
+                return product;
+            }
+        }
+    }
+    return false;
+}
+
+function customError(code) {
+    return Promise
+        .reject(CustomValidation.messageValidation({
+            code: code,
+            name: ' custom'
+        }));
 }
 
 module.exports = ShoppingListService;
