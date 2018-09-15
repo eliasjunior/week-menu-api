@@ -35,9 +35,13 @@ function CategoryService() {
                 });
         },
         get() {
-            return Category.find()
-                .populate('products')
+            return Category
+                .find()
                 .sort({ 'name': 1 })
+                .populate( { // not working
+                    path : 'products',
+                    options: { sort: { 'name': -1 }}
+                })
                 .then(categories => categories)
                 .catch(reason => Promise.reject(reason));
         }

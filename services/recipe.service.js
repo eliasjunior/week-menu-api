@@ -26,9 +26,10 @@ const RecipeService = () => {
                     .reject(CustomValidation.messageValidation(reason)));
         },
         get() {
-            return Recipe2.find()
-                .populate('categories')
+            return Recipe2
+                .find()
                 .sort({ 'name': 1 })
+                .populate('categories')
                 .then(recipes => recipes)
                 .catch(reason => Promise
                     .reject(CustomValidation.messageValidation(reason)));
