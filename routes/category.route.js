@@ -19,7 +19,7 @@ const attrsFile = require('../db_backup/attributes.json')
 const { Recipe2 } = require('../models/recipe2.model');
 
 
-router.get("/category/migration.cat", (request, response, next) => {
+router.get("/category/migration/cat/23", (request, response, next) => {
     Category.remove({}).then(() => {
         const cats = JSON.parse(JSON.stringify(categoryFile))
         const ingreds = JSON.parse(JSON.stringify(ingredFile))
@@ -54,7 +54,7 @@ router.get("/category/migration.cat", (request, response, next) => {
     })
 });
 
-router.get("/category/migration/rec", (request, response, next) => {
+router.get("/category/migration/rec/24", (request, response, next) => {
     const recipes = JSON.parse(JSON.stringify(recipeFile))
     const cats = JSON.parse(JSON.stringify(categoryFile))
     const ingreds = JSON.parse(JSON.stringify(ingredFile))

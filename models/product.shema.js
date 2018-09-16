@@ -12,10 +12,6 @@ const product = new Schema(
         completed: {
             type: Boolean,
             default: false
-        },
-        checked: {
-            type: Boolean,
-            default: false
         }
     });
 
