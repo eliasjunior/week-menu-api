@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+mongoose.plugin(schema => { schema.options.usePushEach = true });
 const product = require('./product.shema');
 
 // TODO test if can reuse the cat scheme

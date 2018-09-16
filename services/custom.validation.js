@@ -9,6 +9,7 @@ const CustomValidation = () => {
             log.logExceptOnTest(errorObject ? errorObject.message : errorObject);
             log.logExceptOnTest('error code =>',errorObject.code);
             log.logExceptOnTest('Full stack trace =>', errorObject);
+            log.logExceptOnTest('End full stack trace =========');
 
             const message = VALIDATION[errorObject.code];
 
