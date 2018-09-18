@@ -1,5 +1,6 @@
 const { Recipe2 } = require('../models/recipe2.model');
 const CustomValidation = require('../services/custom.validation');
+const UtilService = require('./util.service')
 
 const RecipeService = () => {
     return {
@@ -29,8 +30,16 @@ const RecipeService = () => {
             return Recipe2
                 .find()
                 .sort({ 'name': 1 })
-                .populate('categories')
-                .then(recipes => recipes)
+                .then(recipes => {
+                    return recipes.map(recipe => {
+                        // mongoose sort is not working 
+                        recipe.categories = recipe.categories
+                            .sort((catA, catB) => catA.name > catB.name ? 1 : -1)
+                        recipe.categories = UtilService
+                            .sortAllProductCategory(recipe.categories)
+                        return recipe    
+                    })
+                })
                 .catch(reason => Promise
                     .reject(CustomValidation.messageValidation(reason)));
         },

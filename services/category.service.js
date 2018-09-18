@@ -1,6 +1,7 @@
 const { Category } = require('../models/category.model');
 const CustomValidation = require('../services/custom.validation');
 const RecipeSubdocService = require('./recipe.subdoc.service');
+const UtilService = require('./util.service')
 
 function CategoryService() {
     return {
@@ -38,11 +39,7 @@ function CategoryService() {
             return Category
                 .find()
                 .sort({ 'name': 1 })
-                .populate( { // not working
-                    path : 'products',
-                    options: { sort: { 'name': -1 }}
-                })
-                .then(categories => categories)
+                .then(UtilService.sortAllProductCategory)
                 .catch(reason => Promise.reject(reason));
         }
     }

@@ -5,6 +5,16 @@ const UtilService = {
         result.insertDate = new Date();
         result.updateDate = new Date();
         return result;
+    },
+    sortAllProductCategory(categories) {
+        // problem sorting with mongoose
+        const result = categories.map(category => {
+            category.products = 
+                category.products
+                    .sort( (prodA, prodB) => prodA.name > prodB.name ? 1 : -1)
+            return category;        
+        })
+        return result;
     }
 }
-export default UtilService;
+module.exports = UtilService;
