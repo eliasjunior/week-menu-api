@@ -9,7 +9,7 @@ const categorySchema = new mongoose.Schema({
         minlength: 1,
         trim: true,
         unique: true,
-        required: true,
+        required: true
     },
     updateDate: Date,
     insertDate: Date,

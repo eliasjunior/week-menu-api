@@ -44,7 +44,7 @@ const ShoppingListService = {
         return ShoppingList
             .findById(productItem.shopId)
             .then(doc => {
-                let product = updateProductFlag(doc, productItem);
+                let product = updateProduct(doc, productItem);
                 if (product) {
                     return doc.save();
                 }
@@ -78,30 +78,23 @@ const ShoppingListService = {
 function getDayName() {
     const time = new Date();
     const dayLabel = appConstant.days[time.getDay()];
+    const day = `${time.getDate()}/${time.getMonth() + 1}/${time.getFullYear()}`;
+    const hour = `${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`
 
-    return `${dayLabel} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`
+    return `${day} ${dayLabel} ${hour}`
 }
 
-function updateProductFlag(doc, productItem) {
+function updateProduct(doc, productItem) {
+    const getCategory = (_id_, parent) => parent.categories.id(_id_);
+
     const recipe = doc.recipes.id(productItem.recId);
-    if (recipe) {
-        const category = recipe.categories.id(productItem.catId);
-        if (category) {
-            const product = category.products.id(productItem._id);
-            if (product) {
-                product.completed = productItem.completed;
-                return product;
-            }
-        }
-    }
-    else {
-        const category = doc.categories.id(productItem.catId);
-        if (category) {
-            const product = category.products.id(productItem._id);
-            if (product) {
-                product.completed = productItem.completed;
-                return product;
-            }
+    const category = getCategory(productItem.catId, recipe ? recipe : doc)
+    if (category) {
+        const product = category.products.id(productItem._id);
+        if (product) {
+            product.completed = productItem.completed;
+            product.quantity = productItem.quantity;
+            return product;
         }
     }
     return false;

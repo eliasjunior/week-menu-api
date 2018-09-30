@@ -5,7 +5,10 @@ const Schema = mongoose.Schema;
 const product = new Schema(
     {
         name: {
-            type: 'string'
+            type: 'string',
+            unique: true,
+            trim: true,
+            required: true
         },
         insertDate: {
             type: Date
@@ -14,7 +17,10 @@ const product = new Schema(
             type: Boolean,
             default: false
         },
-        
+        quantity: {
+            type: Number,
+            default: 1
+        }
     });
 
 module.exports =  product;    
