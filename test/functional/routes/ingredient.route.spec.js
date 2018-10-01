@@ -1,5 +1,5 @@
 /**
- * Created by eliasmj on 03/12/2016.
+ *  Legacy code, very messy
  */
 
 const request = require("supertest");

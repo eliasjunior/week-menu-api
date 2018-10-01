@@ -1,5 +1,7 @@
 /**
  * Created by eliasmj on 03/12/2016.
+ * Legacy code, very messy
+ *  TO be deleted ****************************
  */
 const router = require('express').Router();
 
@@ -9,7 +11,6 @@ const { Category } = require('../models/category.model');
 const { Recipe } = require('../models/recipe.model');
 const { IngredientRecipeAttributes } = require('../models/ingredient.recipe.attributes.model');
 
-// TO be deleted ****************************
 //***************************************** 
 
 const categoryFile = require('../db_backup/categories.json')

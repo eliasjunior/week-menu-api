@@ -1,5 +1,5 @@
 /**
- * Created by eliasmj on 21/11/2016.
+ *  Legacy code, very messy
  *
  * npm run test-watch
  */

@@ -1,5 +1,7 @@
 /**
  * Created by eliasmj on 26/11/2016.
+ * Legacy code, very messy
+ * TO be deleted ****************************
  */
 const express = require('express');
 const router = express.Router();
