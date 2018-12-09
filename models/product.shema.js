@@ -6,7 +6,6 @@ const product = new Schema(
     {
         name: {
             type: 'string',
-            unique: true,
             trim: true,
             required: true
         },

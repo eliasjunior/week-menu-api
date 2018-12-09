@@ -1,7 +1,7 @@
 const { Category } = require('../models/category.model');
 const CustomValidation = require('../services/custom.validation');
 const RecipeSubdocService = require('./recipe.subdoc.service');
-const UtilService = require('./util.service')
+const UtilService = require('./util')
 
 function CategoryService() {
     return {
@@ -43,6 +43,12 @@ function CategoryService() {
                 .catch(reason => Promise.reject(reason));
         }
     }
+}
+
+//TODO temporary fn for avoid duplication
+function isProductExists() {
+    Category
+        .find({})
 }
 
 function updateCategory(category, doc) {

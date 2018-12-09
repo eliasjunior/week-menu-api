@@ -1,6 +1,6 @@
 const { Recipe2 } = require('../models/recipe2.model');
 const CustomValidation = require('../services/custom.validation');
-const UtilService = require('./util.service')
+const UtilService = require('./util')
 
 const RecipeService = () => {
     return {
