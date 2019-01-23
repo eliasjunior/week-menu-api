@@ -18,7 +18,7 @@ const port = process.env.PORT;
 const secretKey = process.env.SECRET_KEY;
 
 //TODO security change this later
-const whiteList = ['localhost:8100', 'localhost:3000', 'localhost:3002'];
+const whiteList = ['localhost:8100', 'localhost:3000', 'localhost:3002', '109.255.172.3:8090'];
 
 const logger = function (request, response, next) {
     log.logExceptOnTest("Request body: ", request.body);
@@ -36,12 +36,20 @@ const category2Router = require('./routes/category2.route');
 const recipe2Router = require('./routes/recipe2.route');
 const shoppingListRouter = require('./routes/shopping.list.route');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
 
 app.use(bodyParser.json());
 // Create application/x-www-form-urlencoded parser
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.use(cors());
+app.options('*', cors());
+
 app.use(function (req, res, next) {
+
+    /*res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.header('Access-Control-Allow-Headers', 'Authorization');*/
 
     try{
         console.log("Headers", req.headers);
@@ -52,10 +60,6 @@ app.use(function (req, res, next) {
         token = token.replace("Bearer ", "");
         console.log("Token: ", token);
         jwt.verify(token, new Buffer(secretKey, 'base64'));
-
-        res.header('Access-Control-Allow-Origin', '*');
-        res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-        res.header('Access-Control-Allow-Headers', 'Content-Type');
 
         if ('OPTIONS' == req.method) {
             res.sendStatus(200);
