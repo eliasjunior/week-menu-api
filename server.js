@@ -37,6 +37,34 @@ const recipe2Router = require('./routes/recipe2.route');
 const shoppingListRouter = require('./routes/shopping.list.route');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const Eureka = require('eureka-js-client').Eureka;
+
+// example configuration
+const client = new Eureka({
+    // application instance information
+    instance: {
+      app: 'week-menu-api',
+      hostName: '127.0.0.1',
+      ipAddr: '127.0.0.1',
+      statusPageUrl: 'http://127.0.0.1:3002/actuator/info',
+      port: {
+        '$': 3002,
+        '@enabled': 'true',
+      },
+      vipAddress: '127.0.0.1',
+      dataCenterInfo: {
+        '@class': 'com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo',
+        name: 'MyOwn',
+      }
+    },
+    eureka: {
+      // eureka server host / port
+      host: '127.0.0.1',
+      port: 8761,
+      servicePath: '/eureka/apps/'
+    },
+});
+client.start();
 
 app.use(bodyParser.json());
 // Create application/x-www-form-urlencoded parser
@@ -47,25 +75,26 @@ app.options('*', cors());
 
 app.use(function (req, res, next) {
 
-    /*res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-    res.header('Access-Control-Allow-Headers', 'Authorization');*/
-
     try{
-        console.log("Headers", req.headers);
-        let token = req.headers.authorization;
-        if (!token) {
-            throw "Token Not found";
-        }
-        token = token.replace("Bearer ", "");
-        console.log("Token: ", token);
-        jwt.verify(token, new Buffer(secretKey, 'base64'));
-
-        if ('OPTIONS' == req.method) {
+        console.log("Path: ", req.path);
+        if (req.path.startsWith('/actuator/') || req.path === '/favicon.ico') {
             res.sendStatus(200);
-        }
-        else {
-            next();
+        } else {
+            console.log("Headers", req.headers);
+            let token = req.headers.authorization;
+            if (!token) {
+                throw "Token Not found";
+            }
+            token = token.replace("Bearer ", "");
+            console.log("Token: ", token);
+            jwt.verify(token, new Buffer(secretKey, 'base64'));
+
+            if ('OPTIONS' == req.method) {
+                res.sendStatus(200);
+            }
+            else {
+                next();
+            }
         }
     } catch(e) {
         console.log("Error validation JWT", e);
