@@ -24,6 +24,8 @@
         "q": "^1.4.1"
     },
     "devDependencies": {
+        "@babel/preset-env": "^7.5.0",
+        "babel-core": "^6.26.3",
         "chai": "3.5.0",
         "expect": "^1.20.2",
         "mocha": "3.1.2",
